@@ -27,6 +27,8 @@ The lockfile is committed. `npm ci` is the intended install command. ESLint 9 is
 
 ## Deploy a review to Vercel
 
+The implementation is on **`feat/parisi-evaluation-landing`**. `main` is an empty baseline for reviewing this previously empty repository. Select the feature branch for the review deployment, or merge it after review before importing `main`. If the Vercel import flow only offers the default branch, deploy a preview from this feature checkout with the Vercel CLI (`npx vercel`), or configure the project's Git deployment branch before redeploying. Do not import the empty baseline expecting it to contain the app.
+
 1. Import this GitHub repository into a Vercel project. Root Directory: repository root. Framework: **Next.js**. Node.js: **24.x**.
 2. Use `npm ci` for installation and `npm run build` for the build. Leave Output Directory at the Next.js default. Do not use static export; the form requires a server function.
 3. Keep `LAUNCH_APPROVED=false` (the default). You can deploy and inspect all pages without any environment values. Enable Vercel Deployment Protection for review URLs.
