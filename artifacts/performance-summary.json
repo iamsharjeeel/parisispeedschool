@@ -1,0 +1,30 @@
+{
+  "measured_at_utc": "2026-10-18T00:48:39.226Z",
+  "context": "Local production review build; simulated mobile; no photographic assets or live analytics; indexing intentionally disabled.",
+  "scores": {
+    "performance": 94,
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 63
+  },
+  "metrics": {
+    "first-contentful-paint": {
+      "display": "0.9\u00a0s",
+      "value": 904.702
+    },
+    "largest-contentful-paint": {
+      "display": "3.1\u00a0s",
+      "value": 3099.755
+    },
+    "cumulative-layout-shift": {
+      "display": "0",
+      "value": 0
+    },
+    "total-blocking-time": {
+      "display": "40\u00a0ms",
+      "value": 38
+    }
+  },
+  "inp": "Not measured; field data required.",
+  "limitations": "Re-test with approved photography and actual deployment. SEO is reduced by deliberate noindex/robots restrictions."
+}
