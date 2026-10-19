@@ -39,6 +39,8 @@ No deployment, live-domain change, or advertising activation is performed by thi
 
 ## Environment variables
 
+The supplied LeadConnector webhook is configured locally in ignored `.env.local`. For a Vercel deployment, put that supplied URL in the **server-only `CRM_WEBHOOK_URL`** variable and redeploy. The JSON POST includes every visible form field at the top level, plus attribution, consent metadata, and submission identifiers. See `docs/INTEGRATIONS.md` for the exact payload and field mapping. Redis credentials and the signing secret are still required for the existing submission protections.
+
 | Variable                                                     | Purpose                                                                                                                                                                             |
 | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SITE_URL`                                                   | The approved campaign origin, e.g. an HTTPS domain you control. No path or query. Used for canonical, sitemap, schema, and lead page mapping. No original Parisi domain is assumed. |

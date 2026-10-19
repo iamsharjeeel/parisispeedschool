@@ -23,6 +23,8 @@ async function completeForm(page: Page) {
     .fill('test@example.com');
   await page.getByLabel('Phone', { exact: false }).first().fill('2155550123');
   await page.getByLabel('Athlete age group').selectOption('5–11');
+  await page.getByLabel('Primary sport').fill('Soccer');
+  await page.getByLabel('Preferred contact method').selectOption('Email');
   await page.locator('#consent').check();
 }
 test.beforeEach(async ({ request }) => {
@@ -67,7 +69,8 @@ for (const width of [375, 390, 768, 1024, 1440, 1920]) {
     const devtools = await page.context().newCDPSession(page);
     await devtools.send('Audits.enable');
     devtools.on('Audits.issueAdded', ({ issue }) => {
-      if (issue.code === 'ContentSecurityPolicyIssue') cspIssues.push(issue.code);
+      if (issue.code === 'ContentSecurityPolicyIssue')
+        cspIssues.push(issue.code);
     });
     page.on('pageerror', (error) => pageErrors.push(error.message));
     await page.goto('/');
@@ -102,13 +105,11 @@ for (const width of [375, 390, 768, 1024, 1440, 1920]) {
           ),
       ).toBe(true);
     } else {
-      test
-        .info()
-        .annotations.push({
-          type: 'limitation',
-          description:
-            'Genuine media unavailable: photographic image-load and crop checks are unrun.',
-        });
+      test.info().annotations.push({
+        type: 'limitation',
+        description:
+          'Genuine media unavailable: photographic image-load and crop checks are unrun.',
+      });
     }
     expect(pageErrors).toEqual([]);
     expect(cspIssues).toEqual([]);
@@ -194,7 +195,29 @@ test('confirmed lead preserves attribution, fires one event, and shows signed re
     wbraid: 'test-wbraid',
     adgroup_id: '456',
   });
-  expect(received[0].consent.smsMarketing).toBe(false);
+  expect(received[0]).toMatchObject({
+    guardianName: 'Test Guardian',
+    email: 'test@example.com',
+    phone: '2155550123',
+    ageGroup: '5–11',
+    sport: 'Soccer',
+    contactMethod: 'Email',
+    consent: true,
+    analyticsConsent: true,
+    gclid: 'synthetic-click',
+    utm_campaign: 'test-campaign',
+    campaign_id: '123',
+    gbraid: 'test-gbraid',
+    wbraid: 'test-wbraid',
+    adgroup_id: '456',
+    consentPreferences: {
+      evaluationContact: true,
+      analytics: true,
+      smsMarketing: false,
+    },
+  });
+  expect(received[0]).not.toHaveProperty('website');
+  expect(received[0].idempotencyKey).toBe(received[0].submissionId);
   await page.reload();
   const reloaded = await page.evaluate(
     () => (window as unknown as { recordedEvents: unknown[][] }).recordedEvents,

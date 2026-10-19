@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { leadIntegrationReady } from './config';
+import { buildLeadPayload } from './lead-payload';
 import type { Submission } from './lead-schema';
 
 export class LeadError extends Error {
@@ -119,39 +120,7 @@ export async function submitLead(input: Submission, source: string) {
       );
     if (current.status === 'accepted')
       return { eventId: current.eventId, duplicate: true };
-    const payload = {
-      event: 'evaluation_request',
-      eventId,
-      idempotencyKey: submissionId,
-      source:
-        input.attribution.gclid ||
-        input.attribution.gbraid ||
-        input.attribution.wbraid ||
-        (input.attribution.utm_source === 'google' &&
-          /^(cpc|ppc|paidsearch)$/.test(input.attribution.utm_medium || ''))
-          ? 'Google Ads'
-          : 'Website',
-      campaign:
-        input.attribution.campaign_id || input.attribution.utm_campaign || null,
-      page: process.env.SITE_URL
-        ? `${new URL(process.env.SITE_URL).origin}/`
-        : '/',
-      submittedAt: new Date().toISOString(),
-      guardian: {
-        name: input.guardianName,
-        email: input.email,
-        phone: input.phone,
-      },
-      athlete: { ageGroup: input.ageGroup, primarySport: input.sport || null },
-      contactPreference: input.contactMethod,
-      attribution: input.attribution,
-      consent: {
-        evaluationContact: true,
-        analytics: input.analyticsConsent,
-        smsMarketing: false,
-        disclosureVersion: '2026-10-18',
-      },
-    };
+    const payload = buildLeadPayload(input, eventId);
     let accepted = false;
     try {
       const response = await fetch(process.env.CRM_WEBHOOK_URL!, {
@@ -161,6 +130,7 @@ export async function submitLead(input: Submission, source: string) {
         signal: AbortSignal.timeout(8000),
         headers: {
           'Content-Type': 'application/json',
+          Accept: 'application/json',
           'Idempotency-Key': submissionId,
           ...(process.env.CRM_WEBHOOK_TOKEN
             ? { Authorization: `Bearer ${process.env.CRM_WEBHOOK_TOKEN}` }

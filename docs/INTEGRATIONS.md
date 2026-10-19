@@ -6,29 +6,48 @@
 
 Server-only HTTPS `CRM_WEBHOOK_URL` receives JSON with optional `Authorization: Bearer …` and `Idempotency-Key: <submission UUID>`. It must return a 2xx **only after accepting the lead**. Redirects are refused; timeouts are 8 seconds. The browser receives only a generic error or `{ accepted: true, eventId }`.
 
+The supplied LeadConnector inbound webhook is configured in ignored `.env.local` for this checkout. To enable it on Vercel, set **`CRM_WEBHOOK_URL`** to the supplied URL in Project Settings → Environment Variables and redeploy. The URL itself is not committed or exposed to the browser. Leave `CRM_WEBHOOK_TOKEN` empty unless the webhook explicitly requires additional bearer authentication. Redis and `LEAD_HASH_SECRET` remain required; a webhook URL alone does not enable unprotected collection.
+
+All visible form fields use their original names at the top level for LeadConnector field mapping: `guardianName`, `email`, `phone`, `ageGroup`, `sport`, `contactMethod`, and `consent`. `analyticsConsent` and every supported campaign parameter are also included. Blank sport stays an empty string; absent campaign values are `null`. The hidden spam honeypot is validated locally/server-side and never forwarded. Map the email and phone fields to the workflow's contact fields and the remaining fields to the corresponding custom fields or workflow actions.
+
 Payload example (synthetic data only):
 
 ```json
 {
   "event": "evaluation_request",
   "eventId": "opaque-server-generated-id",
+  "submissionId": "client-request-uuid",
   "idempotencyKey": "client-request-uuid",
+  "guardianName": "Test Guardian",
+  "email": "test@example.com",
+  "phone": "2155550123",
+  "ageGroup": "5–11",
+  "sport": "Soccer",
+  "contactMethod": "Email",
+  "consent": true,
+  "analyticsConsent": false,
+  "gclid": "synthetic-click",
+  "gbraid": null,
+  "wbraid": null,
+  "utm_source": "google",
+  "utm_medium": "cpc",
+  "utm_campaign": "test-campaign",
+  "utm_content": null,
+  "utm_term": null,
+  "campaign_id": "captured-campaign-id",
+  "adgroup_id": null,
   "source": "Google Ads",
-  "campaign": "captured-campaign-id-or-name",
+  "campaign": "captured-campaign-id",
   "page": "https://approved-campaign-domain.example/",
   "submittedAt": "ISO timestamp",
-  "guardian": {
-    "name": "Test Guardian",
-    "email": "test@example.com",
-    "phone": "2155550123"
-  },
-  "athlete": { "ageGroup": "5–11", "primarySport": "Soccer" },
-  "contactPreference": "Email",
   "attribution": {
     "gclid": "synthetic-click",
-    "utm_campaign": "test-campaign"
+    "utm_source": "google",
+    "utm_medium": "cpc",
+    "utm_campaign": "test-campaign",
+    "campaign_id": "captured-campaign-id"
   },
-  "consent": {
+  "consentPreferences": {
     "evaluationContact": true,
     "analytics": false,
     "smsMarketing": false,

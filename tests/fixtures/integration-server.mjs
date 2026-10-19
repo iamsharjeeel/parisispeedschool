@@ -64,6 +64,12 @@ const server = http.createServer(async (req, res) => {
     return send(200, { result });
   }
   if (req.url === '/crm') {
+    if (
+      req.method !== 'POST' ||
+      req.headers['content-type'] !== 'application/json' ||
+      req.headers.accept !== 'application/json'
+    )
+      return send(415, { error: 'Expected a JSON POST' });
     if (req.headers.authorization !== 'Bearer local-crm-token')
       return send(401, {});
     if (mode === 'failure')

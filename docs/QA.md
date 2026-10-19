@@ -1,5 +1,15 @@
 # Validation and handoff
 
+## LeadConnector webhook update — October 19, 2026
+
+The user-supplied webhook is configured as `CRM_WEBHOOK_URL` in ignored local configuration. A signing secret was generated locally without printing it. Neither value is committed. Every visible form field is now sent by its original name at the top level of the JSON POST, together with campaign identifiers, consent metadata, a server timestamp, and submission IDs. See `INTEGRATIONS.md` for the exact payload and Vercel setup.
+
+Validation for this update: TypeScript, lint, production build, **16 unit tests** and **18 browser/integration tests** passed (browser run: 31.1s). The fixture verifies POST, JSON Content-Type and Accept headers, complete field values, attribution, consent, and idempotency. The real webhook URL was checked against public production assets and was absent. The production dependency declarations were unchanged.
+
+Live receipt is **unverified**: the cloud proxy denied access to `services.leadconnectorhq.com` with CONNECT 403. The required host addition was saved to the environment draft, preserving existing allowed domains. No live webhook request or test lead was sent. Redis variables are still absent locally. On Vercel, set the supplied URL as the server-only `CRM_WEBHOOK_URL` plus `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, and `LEAD_HASH_SECRET`, then redeploy. Existing launch/media/privacy requirements and the need to confirm downstream idempotency still apply.
+
+## Original campaign validation
+
 Tested October 18, 2026. The implementation is ready for a **Vercel review deployment**, with public launch explicitly gated on the external requirements below. Nothing has been deployed to Vercel, connected to the existing business domain, or used to launch ads.
 
 ## Executed checks
