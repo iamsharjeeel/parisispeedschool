@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { assets } from '@/lib/assets';
 import { business } from '@/lib/content';
 import { PrivacySettings } from './analytics';
+import { SiteNavigation } from './site-navigation';
+import { pageLinks } from '@/lib/site-pages';
 
 export function Arrow({ diagonal = false }: { diagonal?: boolean }) {
   return (
@@ -43,17 +45,15 @@ export function CTA({
   children = 'Request a free evaluation',
   placement = 'page',
   className = '',
+  href = '#evaluation',
 }: {
   children?: React.ReactNode;
   placement?: string;
   className?: string;
+  href?: string;
 }) {
   return (
-    <a
-      href="#evaluation"
-      className={`button ${className}`}
-      data-cta={placement}
-    >
+    <a href={href} className={`button ${className}`} data-cta={placement}>
       {children}
       <Arrow />
     </a>
@@ -66,21 +66,16 @@ export function Brand({ footer = false }: { footer?: boolean }) {
       className={`brand ${footer ? 'brand-footer' : ''}`}
       aria-label="Parisi Speed School Horsham Pennsylvania home"
     >
-      {assets.approved ? (
+      <span className="brand-mark">
         <Image
           src={assets.logo}
-          width={240}
-          height={62}
-          alt="Parisi Speed School"
-          priority={!footer}
+          width={448}
+          height={107}
+          alt="Parisi Speed School of Horsham"
+          sizes="(max-width: 600px) 152px, 224px"
+          preload={!footer}
+          unoptimized
         />
-      ) : (
-        <span className="brand-type">
-          PARISI <span>SPEED SCHOOL</span>
-        </span>
-      )}
-      <span className="brand-location">
-        HORSHAM <span>PENNSYLVANIA</span>
       </span>
     </Link>
   );
@@ -90,6 +85,7 @@ export function Header() {
     <header className="site-header">
       <div className="header-inner">
         <Brand />
+        <SiteNavigation />
         <div className="header-actions">
           <a
             className="header-phone"
@@ -101,7 +97,7 @@ export function Header() {
           </a>
           <Link
             className="button header-cta"
-            href="/#evaluation"
+            href="/athlete-evaluation#evaluation"
             data-cta="header"
           >
             Free athlete evaluation
@@ -141,6 +137,20 @@ export function Footer() {
           </a>
         </div>
       </div>
+      <nav
+        className="container footer-pages"
+        aria-label="Explore Parisi Horsham"
+      >
+        <span>EXPLORE PARISI HORSHAM</span>
+        <div>
+          {pageLinks.map((page) => (
+            <Link href={page.href} key={page.href}>
+              {page.label}
+              <Arrow diagonal />
+            </Link>
+          ))}
+        </div>
+      </nav>
       <div className="container footer-bottom">
         <span>
           © {new Date().getFullYear()} {business.name}
@@ -156,6 +166,21 @@ export function Footer() {
         </nav>
       </div>
     </footer>
+  );
+}
+
+export function MobileActions() {
+  return (
+    <div className="mobile-bottom">
+      <a href={`tel:${business.telephone}`} aria-label="Call Parisi Horsham">
+        <PhoneIcon />
+        <span>CALL</span>
+      </a>
+      <Link href="/athlete-evaluation#evaluation" data-cta="mobile">
+        FREE ATHLETE EVALUATION
+        <Arrow />
+      </Link>
+    </div>
   );
 }
 export function SectionHeading({

@@ -7,7 +7,7 @@ export function proxy(request: NextRequest) {
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ''}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: https://www.google-analytics.com https://www.googletagmanager.com https://www.googleadservices.com https://www.google.com https://googleads.g.doubleclick.net",
+    "img-src 'self' data: https://assets.cdn.filesafe.space https://www.google-analytics.com https://www.googletagmanager.com https://www.googleadservices.com https://www.google.com https://googleads.g.doubleclick.net",
     "font-src 'self'",
     `connect-src 'self' https://*.google-analytics.com https://www.googletagmanager.com https://www.googleadservices.com https://www.google.com https://googleads.g.doubleclick.net${dev ? ' ws: wss:' : ''}`,
     'frame-src https://www.googletagmanager.com https://www.google.com',

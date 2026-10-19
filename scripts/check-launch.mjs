@@ -76,7 +76,6 @@ if (
 )
   requireFlag('ANALYTICS_APPROVED');
 for (const name of [
-  'parisi-logo',
   'sprint-acceleration',
   'resisted-sprint',
   'strength-conditioning',

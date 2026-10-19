@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import localFont from 'next/font/local';
 import './globals.css';
 import { Analytics } from '@/components/analytics';
-import { Header, Footer } from '@/components/ui';
+import { Header, Footer, MobileActions } from '@/components/ui';
 import { siteUrl } from '@/lib/config';
 const display = localFont({
   src: [
@@ -79,6 +79,7 @@ export default async function RootLayout({
         <Header />
         {children}
         <Footer />
+        <MobileActions />
         <Analytics nonce={nonce} />
       </body>
     </html>

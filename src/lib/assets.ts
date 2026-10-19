@@ -1,8 +1,7 @@
-// Use genuine, approved assets only. See docs/MEDIA.md before enabling.
-// Filenames describe intended placements; verify the originals before assignment.
+// The logo was supplied by the business. Photography retains its separate approval.
 export const assets = {
   approved: process.env.MEDIA_APPROVED === 'true',
-  logo: '/media/parisi-logo.webp',
+  logo: 'https://assets.cdn.filesafe.space/OvJwbyYdrzzTkNVRnie5/media/6ad69a053b8fa9783e767b62.png',
   hero: '/media/sprint-acceleration.webp',
   speed: '/media/resisted-sprint.webp',
   strength: '/media/strength-conditioning.webp',

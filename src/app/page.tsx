@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { Arrow, CTA, PhoneIcon, SectionHeading } from '@/components/ui';
@@ -6,6 +7,7 @@ import { LeadForm } from '@/components/lead-form';
 import { assets } from '@/lib/assets';
 import { assessments, business, faqs, programs } from '@/lib/content';
 import { siteUrl } from '@/lib/config';
+import { pageLinks } from '@/lib/site-pages';
 export const metadata: Metadata = {
   ...(siteUrl() ? { alternates: { canonical: `${siteUrl()}/` } } : {}),
 };
@@ -200,6 +202,13 @@ export default async function Home() {
               <Arrow />
             </a>
           </div>
+          <Link
+            className="text-link section-page-link"
+            href="/athlete-evaluation"
+          >
+            See what your evaluation includes
+            <Arrow diagonal />
+          </Link>
           <p className="small-note">
             The mobility screening is a training assessment, not a medical
             evaluation or diagnosis.
@@ -236,6 +245,7 @@ export default async function Home() {
                 alt: 'Resisted sprint training at Parisi Horsham',
                 number: '01',
                 graphic: 'speed',
+                href: '/speed-agility',
               },
               {
                 name: 'STRENGTH',
@@ -245,6 +255,7 @@ export default async function Home() {
                 alt: 'Strength and conditioning at Parisi Horsham',
                 number: '02',
                 graphic: 'strength',
+                href: '/strength-conditioning',
               },
               {
                 name: 'PERFORMANCE',
@@ -254,6 +265,7 @@ export default async function Home() {
                 alt: 'Agility drills at Parisi Horsham',
                 number: '03',
                 graphic: 'performance',
+                href: '/athlete-evaluation',
               },
             ].map((item) => (
               <article className="benefit" key={item.name}>
@@ -280,6 +292,10 @@ export default async function Home() {
                 <div className="benefit-copy">
                   <h4>{item.label}</h4>
                   <p>{item.text}</p>
+                  <Link className="text-link" href={item.href}>
+                    Explore {item.name.toLowerCase()}
+                    <Arrow diagonal />
+                  </Link>
                 </div>
               </article>
             ))}
@@ -408,6 +424,10 @@ export default async function Home() {
               </article>
             ))}
           </div>
+          <Link className="text-link section-page-link" href="/programs">
+            Explore all training programs
+            <Arrow diagonal />
+          </Link>
         </div>
       </section>
 
@@ -467,6 +487,10 @@ export default async function Home() {
               <li>A focus on the individual athlete</li>
             </ul>
             <CTA placement="coaching">Meet your next step</CTA>
+            <Link className="text-link section-page-link" href="/coaching">
+              Our approach to coaching
+              <Arrow diagonal />
+            </Link>
           </div>
         </div>
       </section>
@@ -552,6 +576,10 @@ export default async function Home() {
                 <p>{item.answer}</p>
               </details>
             ))}
+            <Link className="text-link section-page-link" href="/faqs">
+              More about getting started
+              <Arrow diagonal />
+            </Link>
           </div>
         </div>
       </section>
@@ -578,16 +606,27 @@ export default async function Home() {
           </span>
         </div>
       </section>
-      <div className="mobile-bottom">
-        <a href={`tel:${business.telephone}`} aria-label="Call Parisi Horsham">
-          <PhoneIcon />
-          <span>CALL</span>
-        </a>
-        <a href="#evaluation" data-cta="mobile">
-          FREE ATHLETE EVALUATION
-          <Arrow />
-        </a>
-      </div>
+      <section
+        className="section explore-section"
+        aria-labelledby="explore-title"
+      >
+        <div className="container">
+          <p className="eyebrow">YOUR TRAINING. YOUR NEXT STEP.</p>
+          <h2 id="explore-title">
+            GET TO KNOW <span>PARISI HORSHAM.</span>
+          </h2>
+          <div className="explore-grid">
+            {pageLinks.map((page, index) => (
+              <Link className="explore-card" href={page.href} key={page.href}>
+                <span className="explore-number">0{index + 1}</span>
+                <h3>{page.label}</h3>
+                <p>{page.description}</p>
+                <Arrow diagonal />
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

@@ -1,12 +1,14 @@
 # Genuine media requirements
 
-No athlete/facility originals or downloadable official logo source files were attached. No AI athlete photography, stock facility imagery, recreated runner logo, or fabricated coach portraits are used. Current asset switches remain off; public launch checks require the real files.
+The business supplied the official Horsham logo at `https://assets.cdn.filesafe.space/OvJwbyYdrzzTkNVRnie5/media/6ad69a053b8fa9783e767b62.png`. The header and footer reference that original PNG directly, independently of photography approval, with a maximum display width of 224 CSS pixels (152 on mobile). No lossy conversion, stretching, or CSS filter is applied to the artwork. The workspace network cannot access this CDN, so the actual source resolution and external image delivery still need checking in a browser with CDN access.
+
+No athlete/facility originals were attached. No AI athlete photography, stock facility imagery, recreated runner logo, or fabricated coach portraits are used. The photography switch remains off; public launch checks require the real photos.
 
 The brief lists these **suggested** original filenames. The descriptions are not verified against file contents. Inspect originals before making these assignments:
 
 | Original from brief           | Intended derivative                               | Intended placement                   |
 | ----------------------------- | ------------------------------------------------- | ------------------------------------ |
-| Approved official logo source | `public/media/parisi-logo.webp`                   | Header/footer                        |
+| Business-supplied official PNG | Original CDN URL in `src/lib/assets.ts`           | Header/footer                        |
 | DSC07637.jpg                  | `public/media/sprint-acceleration.webp`           | Hero                                 |
 | DSC07490.jpg                  | `public/media/resisted-sprint.webp`               | Speed panel                          |
 | DSC07685.jpg                  | `public/media/strength-conditioning.webp`         | Strength panel                       |
