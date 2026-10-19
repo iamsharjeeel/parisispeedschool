@@ -8,7 +8,7 @@ import { ageGroups, leadSchema, type LeadFields } from '@/lib/lead-schema';
 import { analyticsAllowed, attribution, track } from '@/lib/tracking';
 import { Arrow } from './ui';
 
-export function LeadForm({ available }: { available: boolean }) {
+export function LeadForm() {
   const router = useRouter();
   const [serverError, setServerError] = useState('');
   const started = useRef(false);
@@ -32,12 +32,6 @@ export function LeadForm({ available }: { available: boolean }) {
   });
   async function submit(fields: LeadFields) {
     setServerError('');
-    if (!available) {
-      setServerError(
-        'Please call 215-706-8260 to arrange your evaluation. Online requests are temporarily unavailable.',
-      );
-      return;
-    }
     const data = {
       ...fields,
       attribution: attribution(),
@@ -105,13 +99,6 @@ export function LeadForm({ available }: { available: boolean }) {
       <p className="form-subtitle">
         Tell us a little about your athlete. We’ll take it from here.
       </p>
-      {!available && (
-        <div className="form-notice" role="status">
-          Prefer to get started now?{' '}
-          <a href="tel:+12157068260">Call 215-706-8260</a>. Online requests are
-          temporarily unavailable.
-        </div>
-      )}
       <div className="form-grid">
         <div className="field full">
           <label htmlFor="guardianName">
@@ -232,7 +219,7 @@ export function LeadForm({ available }: { available: boolean }) {
       <button
         className="button form-submit"
         type="submit"
-        disabled={isSubmitting || !available}
+        disabled={isSubmitting}
       >
         {isSubmitting ? 'Sending your request…' : 'Request my free evaluation'}
         <Arrow />

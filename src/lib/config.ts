@@ -8,6 +8,16 @@ export function siteUrl(): string | undefined {
     return undefined;
   }
 }
+export function crmWebhookUrl(): string | undefined {
+  // Keep the user's existing Vercel spelling working; prefer the documented name.
+  return (
+    process.env.CRM_WEBHOOK_URL?.trim() ||
+    process.env.crm_webhook_url?.trim() ||
+    process.env.crm_webook_url?.trim() ||
+    process.env.CRM_WEBOOK_URL?.trim() ||
+    undefined
+  );
+}
 export function safeEndpoint(value: string | undefined): boolean {
   if (!value) return false;
   try {
@@ -26,12 +36,4 @@ export function safeEndpoint(value: string | undefined): boolean {
   } catch {
     return false;
   }
-}
-export function leadIntegrationReady() {
-  return (
-    safeEndpoint(process.env.CRM_WEBHOOK_URL) &&
-    safeEndpoint(process.env.UPSTASH_REDIS_REST_URL) &&
-    Boolean(process.env.UPSTASH_REDIS_REST_TOKEN) &&
-    (process.env.LEAD_HASH_SECRET?.length ?? 0) >= 32
-  );
 }

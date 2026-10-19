@@ -19,7 +19,7 @@ export default function Privacy() {
           <br />
           MATTERS.
         </h1>
-        <p className="legal-intro">Privacy policy · Updated October 18, 2026</p>
+        <p className="legal-intro">Privacy policy · Updated October 19, 2026</p>
         <h2>Who this page is for</h2>
         <p>
           This evaluation request page identifies Parisi Speed School Horsham,
@@ -72,13 +72,12 @@ export default function Privacy() {
         </p>
         <h2>Security and technical records</h2>
         <p>
-          To help prevent abuse, the submission service keeps a keyed hash of
-          the request source for rate limiting for up to 15 minutes. It stores
-          an opaque submission identifier, keyed payload hash, and delivery
-          state for up to 24 hours to prevent duplicate submissions. The
-          application does not log your form details. Hosting and service
-          providers may process technical connection information under their own
-          policies.
+          The submission service sends your request directly to the business’s
+          configured lead-handling provider. This application does not keep a
+          separate lead database or log your form details. A submission
+          identifier is included with the request. Hosting and service
+          providers may process technical connection information under their
+          own policies.
         </p>
         <p>
           After a successful request, a signed, essential receipt cookie lasts
