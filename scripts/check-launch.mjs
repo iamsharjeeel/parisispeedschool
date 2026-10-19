@@ -23,13 +23,19 @@ for (const name of [
   'MEDIA_APPROVED',
   'PRIVACY_APPROVED',
   'OFFER_APPROVED',
-  'CRM_IDEMPOTENCY_CONFIRMED',
   'LAUNCH_APPROVED',
 ])
   requireFlag(name);
-for (const name of ['SITE_URL', 'CRM_WEBHOOK_URL', 'UPSTASH_REDIS_REST_URL']) {
+const webhookUrl =
+  process.env.CRM_WEBHOOK_URL?.trim() ||
+  process.env.crm_webhook_url?.trim() ||
+  process.env.crm_webook_url?.trim() ||
+  process.env.CRM_WEBOOK_URL?.trim();
+for (const name of ['SITE_URL', 'CRM_WEBHOOK_URL']) {
   try {
-    const u = new URL(process.env[name]);
+    const u = new URL(
+      name === 'CRM_WEBHOOK_URL' ? webhookUrl : process.env[name],
+    );
     if (
       u.protocol !== 'https:' ||
       u.username ||
@@ -42,10 +48,6 @@ for (const name of ['SITE_URL', 'CRM_WEBHOOK_URL', 'UPSTASH_REDIS_REST_URL']) {
     failures.push(`${name}: valid approved HTTPS URL required`);
   }
 }
-if (!process.env.UPSTASH_REDIS_REST_TOKEN)
-  failures.push('UPSTASH_REDIS_REST_TOKEN required');
-if ((process.env.LEAD_HASH_SECRET?.length ?? 0) < 32)
-  failures.push('LEAD_HASH_SECRET: at least 32 random characters');
 if (process.env.LOCAL_INTEGRATION_TEST)
   failures.push('LOCAL_INTEGRATION_TEST must not be set for launch');
 if (

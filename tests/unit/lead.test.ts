@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { leadSchema, submissionSchema } from '../../src/lib/lead-schema';
-import { safeEndpoint } from '../../src/lib/config';
+import { crmWebhookUrl, safeEndpoint } from '../../src/lib/config';
 import {
   createReceipt,
   validReceipt,
@@ -21,11 +21,16 @@ const valid = {
 };
 beforeEach(() => {
   vi.unstubAllEnvs();
-  vi.stubEnv(
-    'LEAD_HASH_SECRET',
-    'test-only-hash-secret-never-use-in-production',
-  );
+  for (const key of [
+    'CRM_WEBHOOK_URL',
+    'crm_webhook_url',
+    'crm_webook_url',
+    'CRM_WEBOOK_URL',
+  ])
+    vi.stubEnv(key, '');
+  vi.stubEnv('CRM_WEBHOOK_URL', 'https://crm.example.com/private-hook');
 });
+afterEach(() => vi.unstubAllGlobals());
 describe('Lead validation', () => {
   it('normalizes contact input and accepts the documented fields', () => {
     const result = submissionSchema.parse({
@@ -84,7 +89,7 @@ describe('Safety boundaries', () => {
   it('fails closed if delivery is unconfigured', async () => {
     vi.stubEnv('CRM_WEBHOOK_URL', '');
     await expect(
-      submitLead(submissionSchema.parse(valid), 'local'),
+      submitLead(submissionSchema.parse(valid)),
     ).rejects.toMatchObject({ status: 503 });
   });
   it('verifies signed receipts and rejects tampering and expiration', () => {
@@ -94,5 +99,48 @@ describe('Safety boundaries', () => {
     expect(validReceipt('')).toBe(false);
     vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 601000);
     expect(validReceipt(receipt)).toBe(false);
+  });
+});
+
+describe('Direct webhook delivery', () => {
+  it.each([
+    'CRM_WEBHOOK_URL',
+    'crm_webhook_url',
+    'crm_webook_url',
+    'CRM_WEBOOK_URL',
+  ])('submits with only %s configured', async (key) => {
+    vi.stubEnv('CRM_WEBHOOK_URL', '');
+    vi.stubEnv(key, 'https://crm.example.com/private-hook');
+    const send = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', send);
+    const result = await submitLead(submissionSchema.parse(valid));
+    expect(result.eventId).toMatch(/^[a-f0-9]{32}$/);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0]).toBe(crmWebhookUrl());
+    expect(send.mock.calls[0][1].method).toBe('POST');
+    expect(JSON.parse(send.mock.calls[0][1].body)).toMatchObject({
+      guardianName: valid.guardianName,
+      email: 'test@example.com',
+      phone: valid.phone,
+      ageGroup: valid.ageGroup,
+      sport: valid.sport,
+      contactMethod: valid.contactMethod,
+      consent: true,
+    });
+    expect(validReceipt(createReceipt(result.eventId))).toBe(true);
+  });
+  it('reports failed delivery and allows an immediate retry', async () => {
+    const send = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', send);
+    await expect(
+      submitLead(submissionSchema.parse(valid)),
+    ).rejects.toMatchObject({ status: 502 });
+    await expect(
+      submitLead(submissionSchema.parse(valid)),
+    ).resolves.toHaveProperty('eventId');
+    expect(send).toHaveBeenCalledTimes(2);
   });
 });

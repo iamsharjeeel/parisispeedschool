@@ -4,12 +4,11 @@ import { createReceipt, LeadError, submitLead } from '@/lib/lead-service';
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 const maxBytes = 8192;
-const response = (body: object, status: number, retryAfter?: number) =>
+const response = (body: object, status: number) =>
   NextResponse.json(body, {
     status,
     headers: {
       'Cache-Control': 'no-store',
-      ...(retryAfter ? { 'Retry-After': String(retryAfter) } : {}),
     },
   });
 export async function POST(request: NextRequest) {
@@ -55,16 +54,12 @@ export async function POST(request: NextRequest) {
         { error: 'Please check your details and try again.' },
         400,
       );
-    // Vercel overwrites x-forwarded-for. Never trust arbitrary proxy headers in an unconfigured self-hosted deployment.
-    const source = process.env.VERCEL
-      ? request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-        'unknown'
-      : 'local';
-    const result = await submitLead(parsed.data, source);
+    const result = await submitLead(parsed.data);
     const res = response({ accepted: true, eventId: result.eventId }, 200);
     res.cookies.set('parisi_receipt', createReceipt(result.eventId), {
       httpOnly: true,
-      secure: request.nextUrl.protocol === 'https:',
+      secure:
+        Boolean(process.env.VERCEL) || request.nextUrl.protocol === 'https:',
       sameSite: 'lax',
       path: '/thank-you',
       maxAge: 600,
@@ -72,11 +67,7 @@ export async function POST(request: NextRequest) {
     return res;
   } catch (error) {
     if (error instanceof LeadError)
-      return response(
-        { error: error.publicMessage },
-        error.status,
-        error.retryAfter,
-      );
+      return response({ error: error.publicMessage }, error.status);
     return response(
       {
         error:

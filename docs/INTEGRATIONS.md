@@ -2,9 +2,15 @@
 
 ## Delivery contract
 
-`POST /api/leads` validates the JSON body, same-origin request, size (8 KiB maximum), honeypot, and consent. It rate-limits by a keyed source hash (10 validated requests / 15 minutes). Vercel's platform-overwritten `x-forwarded-for` is used on Vercel; local/unconfigured self-hosted requests share a conservative bucket. Configure a trusted source policy before non-Vercel hosting.
+The form sends a direct server-side JSON POST to the private webhook. **Only one environment variable is needed:** `CRM_WEBHOOK_URL`. Existing `crm_webook_url`, `crm_webhook_url`, and `CRM_WEBOOK_URL` spellings are also accepted, with the canonical uppercase name taking precedence.
 
-Server-only HTTPS `CRM_WEBHOOK_URL` receives JSON with optional `Authorization: Bearer …` and `Idempotency-Key: <submission UUID>`. It must return a 2xx **only after accepting the lead**. Redirects are refused; timeouts are 8 seconds. The browser receives only a generic error or `{ accepted: true, eventId }`.
+There is no Redis, database, queue, rate-limit service, bearer-token requirement, or separate signing-secret setting. The submit button is enabled and only disables while sending. Normal field validation still applies. The server retains request validation, a size limit, same-origin checks, and the hidden spam trap.
+
+The webhook gets `Content-Type: application/json`, `Accept: application/json`, and `Idempotency-Key: <submission UUID>`. Only a successful webhook HTTP response produces the thank-you flow. Failed deliveries display an error and permit immediate retry. Requests are not silently discarded or reported as successful.
+
+In Vercel, keep the supplied webhook URL in the variable already configured, select the deployment's environment scope, and redeploy the latest feature-branch commit. The private URL is not committed or included in browser code.
+
+All visible form fields use their original names at the top level for LeadConnector field mapping: `guardianName`, `email`, `phone`, `ageGroup`, `sport`, `contactMethod`, and `consent`. `analyticsConsent` and every supported campaign parameter are also included. Blank sport stays an empty string; absent campaign values are `null`. The hidden spam honeypot is validated locally/server-side and never forwarded. Map the email and phone fields to the workflow's contact fields and the remaining fields to the corresponding custom fields or workflow actions.
 
 Payload example (synthetic data only):
 
@@ -12,23 +18,38 @@ Payload example (synthetic data only):
 {
   "event": "evaluation_request",
   "eventId": "opaque-server-generated-id",
+  "submissionId": "client-request-uuid",
   "idempotencyKey": "client-request-uuid",
+  "guardianName": "Test Guardian",
+  "email": "test@example.com",
+  "phone": "2155550123",
+  "ageGroup": "5–11",
+  "sport": "Soccer",
+  "contactMethod": "Email",
+  "consent": true,
+  "analyticsConsent": false,
+  "gclid": "synthetic-click",
+  "gbraid": null,
+  "wbraid": null,
+  "utm_source": "google",
+  "utm_medium": "cpc",
+  "utm_campaign": "test-campaign",
+  "utm_content": null,
+  "utm_term": null,
+  "campaign_id": "captured-campaign-id",
+  "adgroup_id": null,
   "source": "Google Ads",
-  "campaign": "captured-campaign-id-or-name",
+  "campaign": "captured-campaign-id",
   "page": "https://approved-campaign-domain.example/",
   "submittedAt": "ISO timestamp",
-  "guardian": {
-    "name": "Test Guardian",
-    "email": "test@example.com",
-    "phone": "2155550123"
-  },
-  "athlete": { "ageGroup": "5–11", "primarySport": "Soccer" },
-  "contactPreference": "Email",
   "attribution": {
     "gclid": "synthetic-click",
-    "utm_campaign": "test-campaign"
+    "utm_source": "google",
+    "utm_medium": "cpc",
+    "utm_campaign": "test-campaign",
+    "campaign_id": "captured-campaign-id"
   },
-  "consent": {
+  "consentPreferences": {
     "evaluationContact": true,
     "analytics": false,
     "smsMarketing": false,
@@ -39,17 +60,13 @@ Payload example (synthetic data only):
 
 Source is Google Ads when a Google ad click identifier is present or Google has a paid-search medium; other traffic is Website. Campaign values are not invented. The campaign page stored with the lead is the configured origin, not a visitor-controlled full URL.
 
-## Idempotency and reliability
+## Delivery behavior
 
-Upstash Redis REST stores an opaque request ID, keyed payload hash, event ID, and state for 24 hours. Atomic `SET NX` establishes a 30-second delivery lock. No raw lead fields are stored in Redis. Accepted submissions return their original event ID. A changed payload under an existing UUID is rejected. The UI keeps its UUID for retries of unchanged data.
-
-**The receiving CRM adapter must durably honor `Idempotency-Key` for at least 24 hours.** An upstream timeout can occur after the CRM already accepted a lead, and a process can fail before recording acceptance. Retrying with the same key is safe only if the downstream adapter deduplicates. A generic GoHighLevel inbound webhook must not be assumed to do this; use an approved middleware adapter if its native endpoint lacks that guarantee. Set `CRM_IDEMPOTENCY_CONFIRMED=true` only after testing this behavior. No claim of exactly-once delivery across arbitrary third parties is made.
-
-This implementation fails closed when Redis or the CRM is unavailable. It does not queue a discarded request or display a false success. Operational availability should be monitored using provider tools without logging personal data. The local fixture tests this contract, not a real GHL/Redis account.
+Each valid submission is forwarded immediately to the webhook. There are no infrastructure locks, counters, or storage prerequisites. The browser prevents double-clicks while a request is in flight, and keeps the submission identifier for retries. Deduplication across requests, if desired, belongs to the receiving workflow using that identifier; the application does not claim exactly-once delivery. A network timeout can leave receipt uncertain, and the error allows the visitor to retry.
 
 ## Confirmed success
 
-After confirmed delivery, the API issues a signed, HttpOnly, SameSite=Lax receipt cookie for `/thank-you` lasting 10 minutes (Secure over HTTPS). The thank-you page verifies the signature and time; a direct visit without a receipt shows a neutral request prompt. The page never claims a booking. No conversion is fired on thank-you page views or refreshes.
+After confirmed delivery, the API issues a signed, HttpOnly, SameSite=Lax receipt cookie for `/thank-you` lasting 10 minutes (Secure over HTTPS). The signing key is derived on the server from the private webhook URL; no additional environment variable is needed. The thank-you page verifies the signature and time; a direct visit without a receipt shows a neutral request prompt. The page never claims a booking. No conversion is fired on thank-you page views or refreshes.
 
 ## Consent and analytics
 

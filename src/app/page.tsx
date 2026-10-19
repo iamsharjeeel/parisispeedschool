@@ -5,7 +5,7 @@ import { Arrow, CTA, PhoneIcon, SectionHeading } from '@/components/ui';
 import { LeadForm } from '@/components/lead-form';
 import { assets } from '@/lib/assets';
 import { assessments, business, faqs, programs } from '@/lib/content';
-import { leadIntegrationReady, siteUrl } from '@/lib/config';
+import { siteUrl } from '@/lib/config';
 export const metadata: Metadata = {
   ...(siteUrl() ? { alternates: { canonical: `${siteUrl()}/` } } : {}),
 };
@@ -523,7 +523,7 @@ export default async function Home() {
               confirmation. No paid enrollment is required to send a request.
             </p>
           </div>
-          <LeadForm available={leadIntegrationReady()} />
+          <LeadForm />
         </div>
       </section>
 

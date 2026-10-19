@@ -23,6 +23,8 @@ async function completeForm(page: Page) {
     .fill('test@example.com');
   await page.getByLabel('Phone', { exact: false }).first().fill('2155550123');
   await page.getByLabel('Athlete age group').selectOption('5–11');
+  await page.getByLabel('Primary sport').fill('Soccer');
+  await page.getByLabel('Preferred contact method').selectOption('Email');
   await page.locator('#consent').check();
 }
 test.beforeEach(async ({ request }) => {
@@ -67,7 +69,8 @@ for (const width of [375, 390, 768, 1024, 1440, 1920]) {
     const devtools = await page.context().newCDPSession(page);
     await devtools.send('Audits.enable');
     devtools.on('Audits.issueAdded', ({ issue }) => {
-      if (issue.code === 'ContentSecurityPolicyIssue') cspIssues.push(issue.code);
+      if (issue.code === 'ContentSecurityPolicyIssue')
+        cspIssues.push(issue.code);
     });
     page.on('pageerror', (error) => pageErrors.push(error.message));
     await page.goto('/');
@@ -102,13 +105,11 @@ for (const width of [375, 390, 768, 1024, 1440, 1920]) {
           ),
       ).toBe(true);
     } else {
-      test
-        .info()
-        .annotations.push({
-          type: 'limitation',
-          description:
-            'Genuine media unavailable: photographic image-load and crop checks are unrun.',
-        });
+      test.info().annotations.push({
+        type: 'limitation',
+        description:
+          'Genuine media unavailable: photographic image-load and crop checks are unrun.',
+      });
     }
     expect(pageErrors).toEqual([]);
     expect(cspIssues).toEqual([]);
@@ -134,6 +135,14 @@ test('CTAs, FAQ keyboard interaction, and accessible validation', async ({
   page,
 }) => {
   await page.goto('/');
+  await expect(
+    page.getByText('Online requests are temporarily unavailable.', {
+      exact: false,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Request my free evaluation' }),
+  ).toBeEnabled();
   await page.locator('[data-cta="hero"]').click();
   await expect(page).toHaveURL(/#evaluation/);
   await page
@@ -194,7 +203,29 @@ test('confirmed lead preserves attribution, fires one event, and shows signed re
     wbraid: 'test-wbraid',
     adgroup_id: '456',
   });
-  expect(received[0].consent.smsMarketing).toBe(false);
+  expect(received[0]).toMatchObject({
+    guardianName: 'Test Guardian',
+    email: 'test@example.com',
+    phone: '2155550123',
+    ageGroup: '5–11',
+    sport: 'Soccer',
+    contactMethod: 'Email',
+    consent: true,
+    analyticsConsent: true,
+    gclid: 'synthetic-click',
+    utm_campaign: 'test-campaign',
+    campaign_id: '123',
+    gbraid: 'test-gbraid',
+    wbraid: 'test-wbraid',
+    adgroup_id: '456',
+    consentPreferences: {
+      evaluationContact: true,
+      analytics: true,
+      smsMarketing: false,
+    },
+  });
+  expect(received[0]).not.toHaveProperty('website');
+  expect(received[0].idempotencyKey).toBe(received[0].submissionId);
   await page.reload();
   const reloaded = await page.evaluate(
     () => (window as unknown as { recordedEvents: unknown[][] }).recordedEvents,
@@ -282,30 +313,10 @@ test('server rejects invalid input, cross-origin requests, oversized bodies and 
     ).status(),
   ).toBe(415);
 });
-test('idempotency survives repeated requests and rejects changed payloads', async ({
+test('valid submissions are not blocked by infrastructure counters', async ({
   request,
 }) => {
-  const data = lead();
-  const headers = { origin: base };
-  const first = await request.post('/api/leads', { headers, data });
-  expect(first.status()).toBe(200);
-  const second = await request.post('/api/leads', { headers, data });
-  expect(second.status()).toBe(200);
-  expect(await second.json()).toEqual(await first.json());
-  expect(
-    (await (await request.get(`${fixture}/leads`)).json()).leads,
-  ).toHaveLength(1);
-  expect(
-    (
-      await request.post('/api/leads', {
-        headers,
-        data: { ...data, sport: 'Hockey' },
-      })
-    ).status(),
-  ).toBe(409);
-});
-test('rate limiting applies to server submissions', async ({ request }) => {
-  for (let i = 0; i < 10; i++)
+  for (let i = 0; i < 12; i++) {
     expect(
       (
         await request.post('/api/leads', {
@@ -314,14 +325,12 @@ test('rate limiting applies to server submissions', async ({ request }) => {
         })
       ).status(),
     ).toBe(200);
-  const rejected = await request.post('/api/leads', {
-    headers: { origin: base },
-    data: lead(),
-  });
-  expect(rejected.status()).toBe(429);
-  expect(rejected.headers()['retry-after']).toBe('900');
+  }
+  expect(
+    (await (await request.get(`${fixture}/leads`)).json()).requests,
+  ).toHaveLength(12);
 });
-test('CRM errors never show success and allow a safe retry', async ({
+test('CRM errors re-enable the submit button and allow retry', async ({
   page,
   request,
 }) => {
@@ -332,7 +341,7 @@ test('CRM errors never show success and allow a safe retry', async ({
     .getByRole('button', { name: 'Request my free evaluation' })
     .click();
   await expect(page.locator('.submission-error[role="alert"]')).toContainText(
-    'couldn’t confirm',
+    'couldn’t send',
   );
   await expect(page).not.toHaveURL(/thank-you/);
   expect(
@@ -344,9 +353,7 @@ test('CRM errors never show success and allow a safe retry', async ({
     .click();
   await expect(page).toHaveURL(/thank-you/);
 });
-test('CRM timeout with ambiguous acceptance retries without duplicate delivery', async ({
-  request,
-}) => {
+test('CRM timeout shows an error and allows retry', async ({ request }) => {
   await request.post(`${fixture}/mode`, { data: { mode: 'timeout' } });
   const data = lead();
   const response = await request.post('/api/leads', {
@@ -388,7 +395,9 @@ test('mobile request flow and legal-page accessibility', async ({ page }) => {
     ).toBe(true);
   }
 });
-test('concurrent retries deliver a single lead', async ({ request }) => {
+test('concurrent submissions are forwarded without infrastructure locks', async ({
+  request,
+}) => {
   await request.post(`${fixture}/mode`, { data: { mode: 'slow' } });
   const data = lead();
   const headers = { origin: base };
@@ -396,7 +405,7 @@ test('concurrent retries deliver a single lead', async ({ request }) => {
     request.post('/api/leads', { headers, data }),
     request.post('/api/leads', { headers, data }),
   ]);
-  expect(responses.map((r) => r.status()).sort()).toEqual([200, 409]);
+  expect(responses.map((r) => r.status()).sort()).toEqual([200, 200]);
   expect((await request.post('/api/leads', { headers, data })).status()).toBe(
     200,
   );
