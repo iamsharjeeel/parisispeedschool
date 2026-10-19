@@ -1,4 +1,5 @@
 import { attributionKeys, type Submission } from './lead-schema';
+import { siteUrl } from './config';
 
 /** Flat form fields are directly selectable in LeadConnector's webhook mapper. */
 export function buildLeadPayload(input: Submission, eventId: string) {
@@ -29,9 +30,8 @@ export function buildLeadPayload(input: Submission, eventId: string) {
         : 'Website',
     campaign:
       input.attribution.campaign_id || input.attribution.utm_campaign || null,
-    page: process.env.SITE_URL
-      ? `${new URL(process.env.SITE_URL).origin}/`
-      : '/',
+    page: `${siteUrl() || ''}${input.pagePath}`,
+    landingPage: `${siteUrl() || ''}${input.landingPath || input.pagePath}`,
     submittedAt: new Date().toISOString(),
     attribution: input.attribution,
     consentPreferences: {

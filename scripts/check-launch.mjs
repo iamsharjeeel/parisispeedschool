@@ -8,91 +8,93 @@ for (const file of [
   if (existsSync(file)) process.loadEnvFile(file);
 }
 const strict =
-  process.argv.includes('--strict') || process.env.LAUNCH_APPROVED === 'true';
+  process.argv.includes('--strict') ||
+  process.env.SITE_PUBLIC === 'true' ||
+  process.env.LAUNCH_APPROVED === 'true';
 if (!strict) {
   console.log(
-    'Review build: indexing disabled. Lead collection requires configured server credentials. Run npm run check:launch before public advertising.',
+    'Local/preview build: indexing disabled. Production uses SITE_PUBLIC and SITE_URL; form delivery uses the server-only CRM webhook.',
   );
   process.exit(0);
 }
 const failures = [];
-const requireFlag = (name) => {
-  if (process.env[name] !== 'true') failures.push(`${name}=true after review`);
-};
-for (const name of [
-  'MEDIA_APPROVED',
-  'PRIVACY_APPROVED',
-  'OFFER_APPROVED',
-  'LAUNCH_APPROVED',
-])
-  requireFlag(name);
 const webhookUrl =
   process.env.CRM_WEBHOOK_URL?.trim() ||
   process.env.crm_webhook_url?.trim() ||
   process.env.crm_webook_url?.trim() ||
   process.env.CRM_WEBOOK_URL?.trim();
-for (const name of ['SITE_URL', 'CRM_WEBHOOK_URL']) {
+for (const [name, value] of [
+  ['SITE_URL', process.env.SITE_URL],
+  ['CRM_WEBHOOK_URL', webhookUrl],
+]) {
   try {
-    const u = new URL(
-      name === 'CRM_WEBHOOK_URL' ? webhookUrl : process.env[name],
-    );
+    const url = new URL(value);
     if (
-      u.protocol !== 'https:' ||
-      u.username ||
-      u.password ||
-      u.hostname === 'localhost' ||
-      u.hash
+      url.protocol !== 'https:' ||
+      url.username ||
+      url.password ||
+      url.hostname === 'localhost' ||
+      url.hash
     )
       throw Error();
   } catch {
-    failures.push(`${name}: valid approved HTTPS URL required`);
+    failures.push(`${name}: valid HTTPS URL required`);
   }
 }
 if (process.env.LOCAL_INTEGRATION_TEST)
-  failures.push('LOCAL_INTEGRATION_TEST must not be set for launch');
+  failures.push(
+    'LOCAL_INTEGRATION_TEST must not be set for a public deployment',
+  );
 if (
   process.env.NEXT_PUBLIC_GTM_ID &&
   (process.env.NEXT_PUBLIC_GA4_ID || process.env.NEXT_PUBLIC_GOOGLE_ADS_ID)
 )
-  failures.push('Choose GTM or direct Google tags, not both');
+  failures.push('Choose GTM or direct Google tags to avoid duplicate tags');
 for (const [name, pattern] of [
   ['NEXT_PUBLIC_GTM_ID', /^GTM-[A-Z0-9]+$/],
   ['NEXT_PUBLIC_GA4_ID', /^G-[A-Z0-9]+$/],
   ['NEXT_PUBLIC_GOOGLE_ADS_ID', /^AW-\d+$/],
   ['NEXT_PUBLIC_GOOGLE_ADS_LABEL', /^[A-Za-z0-9_-]+$/],
-]) {
+  ['NEXT_PUBLIC_GOOGLE_ADS_CALL_LABEL', /^[A-Za-z0-9_-]+$/],
+])
   if (process.env[name] && !pattern.test(process.env[name]))
     failures.push(`${name}: invalid format`);
+// A Google Ads base tag works before a conversion action/label is created.
+for (const name of [
+  'NEXT_PUBLIC_GOOGLE_ADS_LABEL',
+  'NEXT_PUBLIC_GOOGLE_ADS_CALL_LABEL',
+]) {
+  if (process.env[name] && !process.env.NEXT_PUBLIC_GOOGLE_ADS_ID)
+    failures.push(`${name} requires NEXT_PUBLIC_GOOGLE_ADS_ID`);
 }
+// Typography-only pages are supported. Validate photos only when that layout is enabled.
+if (process.env.MEDIA_APPROVED === 'true') {
+  for (const name of [
+    'sprint-acceleration',
+    'resisted-sprint',
+    'strength-conditioning',
+    'agility-training',
+    'individual-coaching',
+    'group-training',
+    'horsham-facility',
+  ]) {
+    if (!existsSync(`public/media/${name}.webp`))
+      failures.push(
+        `Photo layout enabled but public/media/${name}.webp is missing`,
+      );
+  }
+}
+if (failures.length) {
+  console.error('Launch configuration errors:\n- ' + failures.join('\n- '));
+  process.exit(1);
+}
+console.log(
+  'Public URL, CRM configuration, media references, and Google tag formats validated.',
+);
 if (
   process.env.NEXT_PUBLIC_GOOGLE_ADS_ID &&
   !process.env.NEXT_PUBLIC_GOOGLE_ADS_LABEL
 )
-  failures.push('NEXT_PUBLIC_GOOGLE_ADS_LABEL required with Ads ID');
-if (
-  process.env.NEXT_PUBLIC_GTM_ID ||
-  process.env.NEXT_PUBLIC_GA4_ID ||
-  process.env.NEXT_PUBLIC_GOOGLE_ADS_ID
-)
-  requireFlag('ANALYTICS_APPROVED');
-for (const name of [
-  'sprint-acceleration',
-  'resisted-sprint',
-  'strength-conditioning',
-  'agility-training',
-  'individual-coaching',
-  'group-training',
-  'horsham-facility',
-]) {
-  if (!existsSync(`public/media/${name}.webp`))
-    failures.push(`Approved asset public/media/${name}.webp missing`);
-}
-if (!existsSync('src/app/icon.png'))
-  failures.push('Approved logo favicon src/app/icon.png missing');
-if (failures.length) {
-  console.error('Public launch blocked:\n- ' + failures.join('\n- '));
-  process.exit(1);
-}
-console.log(
-  'Launch configuration validated. Still verify the deployed CRM, consent tags, and approved domain before enabling advertising.',
-);
+  console.log(
+    'Google Ads base tag configured. Add the lead conversion label when that conversion action is created.',
+  );

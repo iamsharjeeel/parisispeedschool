@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import Link from 'next/link';
+import { CampaignLink as Link } from './campaign-link';
 import { assets } from '@/lib/assets';
 import { business } from '@/lib/content';
 import { PrivacySettings } from './analytics';
@@ -53,10 +53,10 @@ export function CTA({
   href?: string;
 }) {
   return (
-    <a href={href} className={`button ${className}`} data-cta={placement}>
+    <Link href={href} className={`button ${className}`} data-cta={placement}>
       {children}
       <Arrow />
-    </a>
+    </Link>
   );
 }
 export function Brand({ footer = false }: { footer?: boolean }) {
@@ -100,7 +100,9 @@ export function Header() {
             href="/athlete-evaluation#evaluation"
             data-cta="header"
           >
-            Free athlete evaluation
+            <span>
+              Free <span className="header-cta-full">athlete </span>evaluation
+            </span>
             <Arrow />
           </Link>
         </div>

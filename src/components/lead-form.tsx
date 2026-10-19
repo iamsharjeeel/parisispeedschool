@@ -1,11 +1,12 @@
 'use client';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { CampaignLink as Link } from '@/components/campaign-link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ageGroups, leadSchema, type LeadFields } from '@/lib/lead-schema';
 import { analyticsAllowed, attribution, track } from '@/lib/tracking';
+import { safePagePath } from '@/lib/campaign';
 import { Arrow } from './ui';
 
 export function LeadForm() {
@@ -36,6 +37,11 @@ export function LeadForm() {
       ...fields,
       attribution: attribution(),
       analyticsConsent: analyticsAllowed(),
+      pagePath: location.pathname,
+      landingPath:
+        safePagePath(
+          new URLSearchParams(location.search).get('landing_path'),
+        ) || location.pathname,
     };
     const serialized = JSON.stringify(data);
     if (!request.current || request.current.fields !== serialized)

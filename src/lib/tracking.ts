@@ -1,4 +1,4 @@
-import { attributionKeys } from './lead-schema';
+import { attributionKeys } from './campaign';
 export type AnalyticsEvent =
   | 'evaluation_lead_submitted'
   | 'click_to_call'
@@ -40,12 +40,30 @@ export function track(
     window.gtag?.('event', event, { ...extra });
     if (
       event === 'evaluation_lead_submitted' &&
+      process.env.NEXT_PUBLIC_GA4_ID
+    ) {
+      window.gtag?.('event', 'generate_lead', {
+        ...extra,
+        send_to: process.env.NEXT_PUBLIC_GA4_ID,
+      });
+    }
+    if (
+      event === 'evaluation_lead_submitted' &&
       process.env.NEXT_PUBLIC_GOOGLE_ADS_ID &&
       process.env.NEXT_PUBLIC_GOOGLE_ADS_LABEL
     ) {
       window.gtag?.('event', 'conversion', {
         send_to: `${process.env.NEXT_PUBLIC_GOOGLE_ADS_ID}/${process.env.NEXT_PUBLIC_GOOGLE_ADS_LABEL}`,
         transaction_id: extra.event_id,
+      });
+    }
+    if (
+      event === 'click_to_call' &&
+      process.env.NEXT_PUBLIC_GOOGLE_ADS_ID &&
+      process.env.NEXT_PUBLIC_GOOGLE_ADS_CALL_LABEL
+    ) {
+      window.gtag?.('event', 'conversion', {
+        send_to: `${process.env.NEXT_PUBLIC_GOOGLE_ADS_ID}/${process.env.NEXT_PUBLIC_GOOGLE_ADS_CALL_LABEL}`,
       });
     }
   }

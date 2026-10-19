@@ -4,19 +4,16 @@ import localFont from 'next/font/local';
 import './globals.css';
 import { Analytics } from '@/components/analytics';
 import { Header, Footer, MobileActions } from '@/components/ui';
-import { siteUrl } from '@/lib/config';
+import { siteIsPublic, siteUrl } from '@/lib/config';
+import { assets } from '@/lib/assets';
 const display = localFont({
   src: [
     {
-      path: '../../node_modules/@fontsource/barlow-condensed/files/barlow-condensed-latin-600-normal.woff2',
-      weight: '600',
-    },
-    {
-      path: '../../node_modules/@fontsource/barlow-condensed/files/barlow-condensed-latin-700-normal.woff2',
+      path: '../../node_modules/@fontsource/kanit/files/kanit-latin-700-normal.woff2',
       weight: '700',
     },
     {
-      path: '../../node_modules/@fontsource/barlow-condensed/files/barlow-condensed-latin-800-normal.woff2',
+      path: '../../node_modules/@fontsource/kanit/files/kanit-latin-800-normal.woff2',
       weight: '800',
     },
   ],
@@ -27,16 +24,8 @@ const display = localFont({
 const body = localFont({
   src: [
     {
-      path: '../../node_modules/@fontsource/inter/files/inter-latin-400-normal.woff2',
-      weight: '400',
-    },
-    {
-      path: '../../node_modules/@fontsource/inter/files/inter-latin-500-normal.woff2',
-      weight: '500',
-    },
-    {
-      path: '../../node_modules/@fontsource/inter/files/inter-latin-600-normal.woff2',
-      weight: '600',
+      path: '../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2',
+      weight: '100 900',
     },
   ],
   variable: '--font-body',
@@ -45,6 +34,7 @@ const body = localFont({
 });
 const url = siteUrl();
 export const metadata: Metadata = {
+  icons: { icon: { url: assets.logo, type: 'image/png' } },
   ...(url ? { metadataBase: new URL(url) } : {}),
   title: {
     default: 'Free Athlete Evaluation | Parisi Speed School Horsham',
@@ -61,10 +51,9 @@ export const metadata: Metadata = {
     ...(url ? { url } : {}),
     siteName: 'Parisi Speed School Horsham',
   },
-  robots:
-    process.env.LAUNCH_APPROVED === 'true'
-      ? { index: true, follow: true }
-      : { index: false, follow: false },
+  robots: siteIsPublic()
+    ? { index: true, follow: true }
+    : { index: false, follow: false },
 };
 export default async function RootLayout({
   children,

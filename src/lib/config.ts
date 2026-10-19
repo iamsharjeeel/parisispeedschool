@@ -8,6 +8,13 @@ export function siteUrl(): string | undefined {
     return undefined;
   }
 }
+export function siteIsPublic(): boolean {
+  return (
+    Boolean(siteUrl()) &&
+    (process.env.SITE_PUBLIC === 'true' ||
+      process.env.LAUNCH_APPROVED === 'true')
+  );
+}
 export function crmWebhookUrl(): string | undefined {
   // Keep the user's existing Vercel spelling working; prefer the documented name.
   return (

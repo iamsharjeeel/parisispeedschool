@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { CampaignLink as Link } from '@/components/campaign-link';
 export default function NotFound() {
   return (
     <main id="main" className="not-found">

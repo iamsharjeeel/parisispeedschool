@@ -8,6 +8,33 @@ export const business = {
   website: 'https://www.parisispeedschoolhorsham.com',
   maps: 'https://www.google.com/maps/search/?api=1&query=400+Horsham+Road+Horsham+PA+19044',
 };
+// Published names, roles and portraits: official Parisi Horsham /our-team page.
+export const coaches = [
+  {
+    name: 'Coach Dom Joseph',
+    role: 'Program Director',
+    photo: '/media/coach-dom.webp',
+    bio: 'Certified Parisi Speed Coach and former Division I defensive back at the University of Virginia.',
+  },
+  {
+    name: 'Coach Jalen',
+    role: 'Program Manager',
+    photo: '/media/coach-jalen.webp',
+    bio: 'Certified Parisi Speed Coach focused on speed, agility, strength, and athletic development.',
+  },
+  {
+    name: 'Coach Mike',
+    role: 'Parisi Speed Coach',
+    photo: '/media/coach-mike.webp',
+    bio: 'A multisport background in boxing, baseball, and football, with a focus on confidence and consistent effort.',
+  },
+  {
+    name: 'Coach Ali',
+    role: 'Parisi Speed Coach',
+    photo: '/media/coach-ali.webp',
+    bio: 'Flag football coach at Lansdale Catholic High School, with experience in flag football and basketball.',
+  },
+];
 export const programs = [
   {
     name: 'JUMP START',

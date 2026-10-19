@@ -1,55 +1,27 @@
-# Parisi Speed School Horsham
+# Parisi Speed School Horsham campaign
 
-A Next.js 16 / React 19 athlete-evaluation page with TypeScript, Tailwind CSS, and a direct server-side JSON webhook form. Node 24.
+Next.js 16 / React 19 website with seven linked training pages, an athlete-evaluation form, Kanit headings and Inter body text matching the official Horsham site, and the business-supplied transparent logo.
 
-## Vercel: one setting for submissions
+Production: https://parisispeedschool.vercel.app
 
-Set **`CRM_WEBHOOK_URL`** to the supplied LeadConnector webhook URL and redeploy. The existing **`crm_webook_url`** spelling also works, as do `crm_webhook_url` and `CRM_WEBOOK_URL`. Only one of these is needed; uppercase `CRM_WEBHOOK_URL` takes precedence if multiple values exist.
+## Develop and verify
 
-**No Redis, database, queue, token, or signing-secret configuration is required.** The form is enabled and sends directly to the webhook. Its button disables only while sending. Failed requests show an error and allow retry; success is shown only after the webhook responds successfully.
+Use Node 24 and `npm ci`, then `npm run dev`. Run `npm run lint`, `npm test`, and `npm run build`. Run `CHROMIUM_PATH=/usr/bin/chromium npm run test:e2e` against the production build; Playwright starts a local synthetic webhook. It never sends leads to the business CRM. The managed workspace blocks the external logo CDN, so tests validate its URL and transparent wrapper and verify locally hosted coach images separately.
 
-The implementation is on **`feat/parisi-evaluation-landing`**. Deploy the latest commit from that branch; `main` remains the empty review baseline until merged. In Vercel use Next.js, Node 24, repository root, `npm ci`, and `npm run build`. Keep the default Next.js output; do not use static export.
+For Google tag integration tests, build with the public identifiers configured (`NEXT_PUBLIC_GOOGLE_ADS_ID=AW-18513687675` and `NEXT_PUBLIC_GA4_ID=G-RRL9JLXCKK`). These identifiers are not secrets. Without them, the tag-specific browser test is skipped.
 
-Set the webhook variable in the environment scope used by the deployment (Preview or Production). Never prefix it with `NEXT_PUBLIC_` or commit its value. Local configuration belongs in ignored `.env.local`.
+## Production settings
 
-All form fields are sent as JSON, including contact details, age group, sport, contact preference, consent, campaign attribution, timestamp, and a submission identifier. See [the exact payload](docs/INTEGRATIONS.md).
+- `SITE_URL`: canonical HTTPS origin.
+- `SITE_PUBLIC=true`: enables indexing, sitemap, and crawler access. Leave it unset for preview/local builds.
+- `CRM_WEBHOOK_URL`: existing server-only LeadConnector webhook; lowercase legacy spellings also work. No Redis, queue, or extra token is required.
+- Google tag settings: see [docs/ADS-SETUP.md](docs/ADS-SETUP.md). Conversion actions are account setup; labels are optional until created.
+- `MEDIA_APPROVED=true` enables the optional full training-photo layout only when every referenced photo exists. Published coach portraits are shown independently of this switch.
 
-## Local development
+Public builds validate the canonical origin, webhook configuration, tag formats, and any enabled media references. They do not fabricate business/legal approval flags. Keep secrets in Vercel; never commit `.env.local`.
 
-```sh
-nvm use
-npm ci
-# Create .env.local with your CRM_WEBHOOK_URL; preserve any existing file.
-npm run dev
-```
+The official site is the source for coach portraits/bios, the attributed parent quote, pricing terms, and schedule links. Portraits are unchanged files from its `/our-team` page. Facility photographs are not published there yet. See [docs/MEDIA.md](docs/MEDIA.md).
 
-```sh
-npm run lint
-npm run typecheck
-npm test
-npm run build
-npm run start
-```
+## Main files
 
-## Tests
-
-```sh
-npx playwright install --with-deps chromium
-npm run build
-npm run test:e2e
-```
-
-If Chromium is already installed, use `CHROMIUM_PATH=/usr/bin/chromium npm run test:e2e`. Browser tests run the production app on port 3000 and a local synthetic webhook on port 4319. They use only `crm_webook_url`, with no extra infrastructure. They send no real leads to the business.
-
-## Editing and optional settings
-
-- Business details, programs, FAQ: `src/lib/content.ts`.
-- Sections and styling: `src/app/page.tsx`, `src/app/globals.css`.
-- Form: `src/components/lead-form.tsx`; validation: `src/lib/lead-schema.ts`.
-- Direct webhook handler: `src/lib/lead-service.ts`; JSON mapping: `src/lib/lead-payload.ts`.
-- Approved genuine media: `src/lib/assets.ts` and `docs/MEDIA.md`.
-- Optional `SITE_URL` controls canonical URLs and business metadata.
-- Optional analytics IDs and consent behavior are described in `docs/INTEGRATIONS.md`.
-- Media, offer/privacy review, indexing, and advertising approval are separate from form delivery. `LAUNCH_APPROVED` defaults false and keeps review indexing off. `npm run check:launch` checks those publication requirements, without Redis or signing-secret requirements.
-
-The privacy/terms pages, genuine-photo requirements, and final-domain review remain documented in `docs/QA.md`. Nothing is automatically deployed to the business domain or used to activate advertising.
+Page structure: `src/app/page.tsx`, `src/app/[slug]/page.tsx`; content: `src/lib/content.ts`, `src/lib/site-pages.ts`; styling: `src/app/globals.css`; campaign links: `src/components/campaign-link.tsx`; form and webhook: `src/components/lead-form.tsx`, `src/lib/lead-payload.ts`, `src/lib/lead-service.ts`.

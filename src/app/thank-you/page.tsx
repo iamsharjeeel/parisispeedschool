@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
-import Link from 'next/link';
+import { CampaignLink as Link } from '@/components/campaign-link';
 import { validReceipt } from '@/lib/lead-service';
 import { Arrow, PhoneIcon } from '@/components/ui';
 export const metadata: Metadata = {

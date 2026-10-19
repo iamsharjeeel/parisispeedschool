@@ -1,5 +1,13 @@
 'use client';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
+import { CampaignLink as Link } from '@/components/campaign-link';
+import { usePathname } from 'next/navigation';
 import { analyticsAllowed, attribution, track } from '@/lib/tracking';
 function loadAnalytics(nonce: string) {
   if (document.getElementById('parisi-analytics')) return;
@@ -9,7 +17,7 @@ function loadAnalytics(nonce: string) {
   if (!gtm && !ga && !ads) return;
   window.dataLayer = window.dataLayer || [];
   // This is Google's documented queue format; gtag reads Arguments objects.
-  window.gtag = function () {
+  window.gtag ||= function () {
     // eslint-disable-next-line prefer-rest-params
     window.dataLayer!.push(arguments);
   };
@@ -41,6 +49,7 @@ function loadAnalytics(nonce: string) {
     const page_location = `${location.origin}${location.pathname}`;
     if (ga && /^G-[A-Z0-9]+$/.test(ga))
       window.gtag('config', ga, {
+        send_page_view: false,
         page_location,
         page_referrer: '',
         allow_google_signals: false,
@@ -56,6 +65,27 @@ function loadAnalytics(nonce: string) {
   document.head.appendChild(script);
 }
 export function Analytics({ nonce }: { nonce: string }) {
+  const pathname = usePathname();
+  const lastPageView = useRef('');
+  const pageView = useCallback(() => {
+    if (!analyticsAllowed() || lastPageView.current === pathname) return;
+    const page_location = `${location.origin}${pathname}`;
+    if (process.env.NEXT_PUBLIC_GTM_ID) {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: 'virtual_page_view',
+        page_location,
+        page_title: document.title,
+      });
+    } else {
+      window.gtag?.('event', 'page_view', {
+        page_location,
+        page_title: document.title,
+        page_referrer: '',
+      });
+    }
+    lastPageView.current = pathname;
+  }, [pathname]);
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const hasChoice = useSyncExternalStore(
@@ -67,6 +97,7 @@ export function Analytics({ nonce }: { nonce: string }) {
     if (analyticsAllowed()) {
       loadAnalytics(nonce);
       attribution();
+      pageView();
     }
     const preferences = () => setOpen(true);
     const click = (event: MouseEvent) => {
@@ -81,7 +112,7 @@ export function Analytics({ nonce }: { nonce: string }) {
       window.removeEventListener('parisi:privacy', preferences);
       document.removeEventListener('click', click);
     };
-  }, [nonce]);
+  }, [nonce, pageView]);
   const choose = (allowed: boolean) => {
     try {
       localStorage.setItem(
@@ -114,14 +145,15 @@ export function Analytics({ nonce }: { nonce: string }) {
     if (allowed && analyticsAllowed()) {
       loadAnalytics(nonce);
       attribution();
+      pageView();
     }
     if (!allowed && document.getElementById('parisi-analytics'))
       location.reload();
   };
   const configured = Boolean(
     process.env.NEXT_PUBLIC_GTM_ID ||
-    process.env.NEXT_PUBLIC_GA4_ID ||
-    process.env.NEXT_PUBLIC_GOOGLE_ADS_ID,
+      process.env.NEXT_PUBLIC_GA4_ID ||
+      process.env.NEXT_PUBLIC_GOOGLE_ADS_ID,
   );
   if (!open && (dismissed || hasChoice || !configured)) return null;
   return (
@@ -131,7 +163,7 @@ export function Analytics({ nonce }: { nonce: string }) {
         <p>
           With your permission, we use analytics and advertising cookies to
           understand visits and evaluation requests. Your choice won’t affect
-          your request. <a href="/privacy">Privacy policy</a>
+          your request. <Link href="/privacy">Privacy policy</Link>
         </p>
       </div>
       <div className="consent-actions">

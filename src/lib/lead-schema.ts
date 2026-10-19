@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { attributionKeys, safePagePath } from './campaign';
+export { attributionKeys } from './campaign';
 // Use Zod's interpreter so validation never attempts eval under the production CSP.
 z.config({ jitless: true });
 export const ageGroups = [
@@ -41,18 +43,6 @@ export const leadSchema = z.object({
   website: z.string().max(0, 'Unable to submit this request.'),
 });
 export type LeadFields = z.input<typeof leadSchema>;
-export const attributionKeys = [
-  'gclid',
-  'gbraid',
-  'wbraid',
-  'utm_source',
-  'utm_medium',
-  'utm_campaign',
-  'utm_content',
-  'utm_term',
-  'campaign_id',
-  'adgroup_id',
-] as const;
 export const attributionSchema = z
   .object(
     Object.fromEntries(
@@ -72,6 +62,14 @@ export const submissionSchema = leadSchema
     submissionId: z.uuid(),
     attribution: attributionSchema,
     analyticsConsent: z.boolean(),
+    pagePath: z
+      .string()
+      .refine((value) => Boolean(safePagePath(value)))
+      .default('/'),
+    landingPath: z
+      .string()
+      .refine((value) => Boolean(safePagePath(value)))
+      .optional(),
   })
   .strict();
 export type Submission = z.infer<typeof submissionSchema>;

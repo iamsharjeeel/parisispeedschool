@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { siteIsPublic } from '@/lib/config';
 
 export function proxy(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
@@ -24,7 +25,7 @@ export function proxy(request: NextRequest) {
   headers.set('Content-Security-Policy', csp);
   const response = NextResponse.next({ request: { headers } });
   response.headers.set('Content-Security-Policy', csp);
-  if (process.env.LAUNCH_APPROVED !== 'true')
+  if (!siteIsPublic())
     response.headers.set('X-Robots-Tag', 'noindex, nofollow');
   return response;
 }

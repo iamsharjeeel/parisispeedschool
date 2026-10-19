@@ -1,5 +1,14 @@
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      'parisi-consent',
+      JSON.stringify({ allowed: false, at: Date.now() }),
+    ),
+  );
+});
+
 const paths = [
   '/programs',
   '/speed-agility',
@@ -19,6 +28,10 @@ test('each linked destination has its own content and complete navigation', asyn
   for (const path of paths) {
     expect((await page.goto(path))?.status()).toBe(200);
     await expect(page.locator('main h1')).toHaveCount(1);
+    await expect(page.locator('.brand-mark').first()).toHaveCSS(
+      'background-color',
+      'rgba(0, 0, 0, 0)',
+    );
     headings.add((await page.locator('main h1').textContent()) || '');
     titles.add(await page.title());
     for (const destination of paths)

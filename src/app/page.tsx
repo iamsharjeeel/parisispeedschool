@@ -1,11 +1,12 @@
 import Image from 'next/image';
-import Link from 'next/link';
+import { CampaignLink as Link } from '@/components/campaign-link';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { Arrow, CTA, PhoneIcon, SectionHeading } from '@/components/ui';
 import { LeadForm } from '@/components/lead-form';
+import { OfficialResources } from '@/components/official-resources';
 import { assets } from '@/lib/assets';
-import { assessments, business, faqs, programs } from '@/lib/content';
+import { assessments, business, coaches, faqs, programs } from '@/lib/content';
 import { siteUrl } from '@/lib/config';
 import { pageLinks } from '@/lib/site-pages';
 export const metadata: Metadata = {
@@ -428,6 +429,7 @@ export default async function Home() {
             Explore all training programs
             <Arrow diagonal />
           </Link>
+          <OfficialResources />
         </div>
       </section>
 
@@ -442,20 +444,18 @@ export default async function Home() {
                 alt="Individual coaching during a Parisi Horsham training session"
               />
             ) : (
-              <div className="coaching-type" aria-hidden="true">
-                <span>SHOW UP.</span>
-                <span>
-                  PUT IN
-                  <br />
-                  THE WORK.
-                </span>
-                <span className="red">
-                  GROW
-                  <br />
-                  TOGETHER.
-                </span>
-                <b>THE PARISI APPROACH ↗</b>
-              </div>
+              <>
+                <Image
+                  src={coaches[0].photo}
+                  fill
+                  sizes="(max-width:800px) 100vw, 50vw"
+                  alt="Coach Dom Joseph, Program Director at Parisi Horsham"
+                />
+                <div className="coach-feature-caption">
+                  <strong>{coaches[0].name}</strong>
+                  <span>{coaches[0].role}</span>
+                </div>
+              </>
             )}
           </div>
           <div className="coaching-copy">
@@ -491,6 +491,16 @@ export default async function Home() {
               Our approach to coaching
               <Arrow diagonal />
             </Link>
+            <blockquote className="parent-quote">
+              <p>
+                “The technology here is incredible. Seeing my son’s sprint times
+                improve on the laser timer gave him so much confidence.”
+              </p>
+              <cite>Sarah M., soccer parent</cite>
+              <a href={business.website} target="_blank" rel="noreferrer">
+                Published on the official Parisi Horsham website ↗
+              </a>
+            </blockquote>
           </div>
         </div>
       </section>

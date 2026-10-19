@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { CampaignLink as Link } from '@/components/campaign-link';
 import { siteUrl } from '@/lib/config';
 export const metadata: Metadata = {
   title: 'Terms of use',

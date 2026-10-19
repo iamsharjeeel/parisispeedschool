@@ -27,8 +27,20 @@ async function completeForm(page: Page) {
   await page.getByLabel('Preferred contact method').selectOption('Email');
   await page.locator('#consent').check();
 }
-test.beforeEach(async ({ request }) => {
+test.beforeEach(async ({ request, page }) => {
   await request.post(`${fixture}/reset`, { data: {} });
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      'parisi-consent',
+      JSON.stringify({ allowed: false, at: Date.now() }),
+    ),
+  );
+  await page.route('https://www.googletagmanager.com/gtag/js?*', (route) =>
+    route.fulfill({
+      contentType: 'application/javascript',
+      body: '/* Google script isolated in local integration tests; queue calls remain observable. */',
+    }),
+  );
 });
 
 test('all public routes, metadata, security headers, and unknown route', async ({
@@ -92,25 +104,24 @@ for (const width of [375, 390, 768, 1024, 1440, 1920]) {
     expect(
       controls.every((r) => r.left >= 0 && r.right <= width && r.width > 0),
     ).toBe(true);
-    if (await page.locator('img').count()) {
-      expect(
-        await page
-          .locator('img')
-          .evaluateAll((images) =>
-            images.every(
-              (image) =>
-                (image as HTMLImageElement).complete &&
-                (image as HTMLImageElement).naturalWidth > 0,
-            ),
-          ),
-      ).toBe(true);
-    } else {
-      test.info().annotations.push({
-        type: 'limitation',
-        description:
-          'Genuine media unavailable: photographic image-load and crop checks are unrun.',
-      });
+    for (const img of await page.locator('img').all()) {
+      const src = (await img.getAttribute('src')) || '';
+      if (src.startsWith('https://assets.cdn.filesafe.space/')) {
+        test.info().annotations.push({
+          type: 'limitation',
+          description:
+            'The workspace blocks the external logo CDN; original URL and transparent styling are checked separately.',
+        });
+        continue;
+      }
+      await img.scrollIntoViewIfNeeded();
+      await expect
+        .poll(() =>
+          img.evaluate((node) => (node as HTMLImageElement).naturalWidth),
+        )
+        .toBeGreaterThan(0);
     }
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     expect(pageErrors).toEqual([]);
     expect(cspIssues).toEqual([]);
     if (width === 375 || width === 1440) {
@@ -412,4 +423,66 @@ test('concurrent submissions are forwarded without infrastructure locks', async 
   expect(
     (await (await request.get(`${fixture}/leads`)).json()).leads,
   ).toHaveLength(1);
+});
+
+test('campaign context survives internal navigation without analytics storage', async ({
+  page,
+  request,
+}) => {
+  await page.goto(
+    '/speed-agility?gclid=synthetic-click&utm_campaign=spring&email=private',
+  );
+  await page
+    .locator('.desktop-navigation')
+    .getByRole('link', { name: 'Coaching', exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/coaching\?/);
+  await expect(page).not.toHaveURL(/email=/);
+  await page.locator('[data-cta="coaching-hero"]').click();
+  await expect(page).toHaveURL(/\/athlete-evaluation\?/);
+  expect(
+    await page.evaluate(() => sessionStorage.getItem('parisi-attribution')),
+  ).toBeNull();
+  await completeForm(page);
+  await page
+    .getByRole('button', { name: 'Request my free evaluation' })
+    .click();
+  await expect(page).toHaveURL(/\/thank-you$/);
+  const received = (await (await request.get(`${fixture}/leads`)).json()).leads;
+  expect(received).toHaveLength(1);
+  expect(received[0]).toMatchObject({
+    gclid: 'synthetic-click',
+    utm_campaign: 'spring',
+    page: '/athlete-evaluation',
+    landingPage: '/speed-agility',
+    analyticsConsent: false,
+  });
+});
+
+test('Google base tags wait for consent and initialize the supplied Ads account', async ({
+  page,
+}) => {
+  await page.addInitScript(() => localStorage.removeItem('parisi-consent'));
+  await page.goto('/');
+  test.skip(
+    (await page.locator('.consent-panel').count()) === 0,
+    'Requires a build with Google tag identifiers configured.',
+  );
+  await expect(page.locator('#parisi-analytics')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Allow analytics' }).click();
+  await expect(page.locator('#parisi-analytics')).toHaveCount(1);
+  const calls = await page.evaluate(() =>
+    (window.dataLayer || []).map((entry) =>
+      Array.from(entry as ArrayLike<unknown>),
+    ),
+  );
+  expect(
+    calls.some((call) => call[0] === 'config' && call[1] === 'AW-18513687675'),
+  ).toBe(true);
+  expect(
+    calls.some((call) => call[0] === 'config' && call[1] === 'G-RRL9JLXCKK'),
+  ).toBe(true);
+  expect(
+    calls.some((call) => call[0] === 'event' && call[1] === 'page_view'),
+  ).toBe(true);
 });

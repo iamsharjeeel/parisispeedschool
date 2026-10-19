@@ -1,11 +1,11 @@
 import type { MetadataRoute } from 'next';
-import { siteUrl } from '@/lib/config';
+import { siteIsPublic, siteUrl } from '@/lib/config';
 import { pageLinks } from '@/lib/site-pages';
 export default function sitemap(): MetadataRoute.Sitemap {
-  return process.env.LAUNCH_APPROVED === 'true' && siteUrl()
+  return siteIsPublic()
     ? ['', ...pageLinks.map((page) => page.href), '/privacy', '/terms'].map(
         (path) => ({
-          url: `${siteUrl()}${path}`,
+          url: `${siteUrl()}${path || '/'}`,
           changeFrequency: 'monthly',
           priority:
             path === ''

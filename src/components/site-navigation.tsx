@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import Link from 'next/link';
+import { CampaignLink as Link } from './campaign-link';
 import { usePathname } from 'next/navigation';
 import { pageLinks } from '@/lib/site-pages';
 

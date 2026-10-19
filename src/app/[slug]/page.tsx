@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { CampaignLink as Link } from '@/components/campaign-link';
 import { notFound } from 'next/navigation';
 import { Arrow, CTA, PhoneIcon } from '@/components/ui';
 import { LeadForm } from '@/components/lead-form';
+import { CoachProfiles } from '@/components/coach-profiles';
+import { OfficialResources } from '@/components/official-resources';
 import { assessments, business, faqs, programs } from '@/lib/content';
 import { pageLinks, trainingPages } from '@/lib/site-pages';
 import { siteUrl } from '@/lib/config';
@@ -255,6 +257,10 @@ export default async function TrainingPage({
             </div>
           )}
 
+          {slug === 'coaching' && <CoachProfiles />}
+          {['programs', 'faqs', 'contact'].includes(slug) && (
+            <OfficialResources />
+          )}
           {page.note && <p className="detail-note">{page.note}</p>}
         </div>
       </section>

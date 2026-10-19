@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { CampaignLink as Link } from '@/components/campaign-link';
 import { PrivacySettings } from '@/components/analytics';
 import { siteUrl } from '@/lib/config';
 export const metadata: Metadata = {
@@ -19,7 +19,7 @@ export default function Privacy() {
           <br />
           MATTERS.
         </h1>
-        <p className="legal-intro">Privacy policy · Updated October 19, 2026</p>
+        <p className="legal-intro">Privacy policy · Updated October 20, 2026</p>
         <h2>Who this page is for</h2>
         <p>
           This evaluation request page identifies Parisi Speed School Horsham,
@@ -53,8 +53,11 @@ export default function Privacy() {
           The page may include campaign parameters such as UTM tags and Google
           click identifiers. We attach the current page’s relevant campaign
           parameters to an evaluation request so the business can understand
-          where the request came from. Without analytics consent, these
-          parameters are not saved by the site in browser storage.
+          where the request came from. Allowlisted campaign parameters may stay
+          in internal page links to preserve that context. We also send the
+          landing page and form page paths, without other query parameters.
+          Without analytics consent, campaign parameters are not saved by the
+          site in browser storage.
         </p>
         <p>
           If you allow analytics, campaign attribution may be held in your
@@ -75,9 +78,8 @@ export default function Privacy() {
           The submission service sends your request directly to the business’s
           configured lead-handling provider. This application does not keep a
           separate lead database or log your form details. A submission
-          identifier is included with the request. Hosting and service
-          providers may process technical connection information under their
-          own policies.
+          identifier is included with the request. Hosting and service providers
+          may process technical connection information under their own policies.
         </p>
         <p>
           After a successful request, a signed, essential receipt cookie lasts
