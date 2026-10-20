@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { CampaignLink as Link } from './campaign-link';
 import { usePathname } from 'next/navigation';
 import { pageLinks } from '@/lib/site-pages';
+import { MainWebsiteLink } from './main-website-link';
 
 const desktopLinks = [
   { href: '/programs', label: 'Programs' },
@@ -35,6 +36,7 @@ export function SiteNavigation() {
             {page.label}
           </Link>
         ))}
+        <MainWebsiteLink>Main website</MainWebsiteLink>
       </nav>
       <button
         ref={toggle}
@@ -78,6 +80,9 @@ export function SiteNavigation() {
             <span aria-hidden="true">↗</span>
           </Link>
         ))}
+        <MainWebsiteLink onClick={() => setOpen(false)}>
+          Main website
+        </MainWebsiteLink>
       </nav>
     </div>
   );

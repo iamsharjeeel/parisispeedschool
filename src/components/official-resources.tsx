@@ -1,4 +1,6 @@
 import { business } from '@/lib/content';
+import { Arrow } from './ui';
+import { MainWebsiteLink } from './main-website-link';
 
 export function OfficialResources() {
   return (
@@ -13,6 +15,9 @@ export function OfficialResources() {
         commitment, then continue month to month. Check the current terms before
         enrolling.
       </p>
+      <MainWebsiteLink className="resource-main-site">
+        Explore our main website
+      </MainWebsiteLink>
       <div>
         <a
           className="text-link"
@@ -20,7 +25,8 @@ export function OfficialResources() {
           target="_blank"
           rel="noreferrer"
         >
-          View pricing & membership terms ↗
+          View pricing & membership terms
+          <Arrow diagonal />
         </a>
         <a
           className="text-link"
@@ -28,7 +34,8 @@ export function OfficialResources() {
           target="_blank"
           rel="noreferrer"
         >
-          View the live class schedule ↗
+          View the live class schedule
+          <Arrow diagonal />
         </a>
       </div>
     </aside>

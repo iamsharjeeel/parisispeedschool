@@ -5,6 +5,7 @@ import { business } from '@/lib/content';
 import { PrivacySettings } from './analytics';
 import { SiteNavigation } from './site-navigation';
 import { pageLinks } from '@/lib/site-pages';
+import { MainWebsiteLink } from './main-website-link';
 
 export function Arrow({ diagonal = false }: { diagonal?: boolean }) {
   return (
@@ -121,6 +122,9 @@ export function Footer() {
             <br />
             Right here in Horsham.
           </p>
+          <MainWebsiteLink className="footer-main-site">
+            Visit our main website
+          </MainWebsiteLink>
         </div>
         <div className="footer-contact">
           <span className="eyebrow">COME TRAIN WITH US</span>
@@ -161,10 +165,6 @@ export function Footer() {
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
           <PrivacySettings />
-          <a href={business.website} target="_blank" rel="noreferrer">
-            Official website
-            <Arrow diagonal />
-          </a>
         </nav>
       </div>
     </footer>
