@@ -273,7 +273,18 @@ test('declining consent keeps analytics and attribution storage off', async ({
   expect(
     await page.evaluate(() => sessionStorage.getItem('parisi-attribution')),
   ).toBeNull();
-  expect(external).toEqual([]);
+  const loaders = await page
+    .locator('script[src^="https://www.googletagmanager.com/gtag/js"]')
+    .evaluateAll((scripts) =>
+      scripts.map((script) => (script as HTMLScriptElement).src),
+    );
+  expect(external).toEqual(loaders);
+  const events = await page.evaluate(() =>
+    (window.dataLayer || [])
+      .map((entry) => Array.from(entry as ArrayLike<unknown>))
+      .filter((entry) => entry[0] === 'event'),
+  );
+  expect(events).toEqual([]);
   await expect(
     page.getByRole('button', { name: 'Request my free evaluation' }),
   ).toBeEnabled();
@@ -458,16 +469,107 @@ test('campaign context survives internal navigation without analytics storage', 
   });
 });
 
-test('Google base tags wait for consent and initialize the supplied Ads account', async ({
-  page,
+test('Google Ads base tag is present in the initial head on every page', async ({
+  request,
 }) => {
-  await page.addInitScript(() => localStorage.removeItem('parisi-consent'));
-  await page.goto('/');
   test.skip(
-    (await page.locator('.consent-panel').count()) === 0,
-    'Requires a build with Google tag identifiers configured.',
+    !process.env.NEXT_PUBLIC_GOOGLE_ADS_ID,
+    'Build and run tests with the public Google tag identifiers configured.',
   );
-  await expect(page.locator('#parisi-analytics')).toHaveCount(0);
+  for (const path of [
+    '/',
+    '/programs',
+    '/speed-agility',
+    '/strength-conditioning',
+    '/athlete-evaluation',
+    '/coaching',
+    '/faqs',
+    '/contact',
+    '/privacy',
+    '/terms',
+    '/thank-you',
+  ]) {
+    const response = await request.get(path);
+    const head = (await response.text()).split('</head>')[0];
+    expect(head, path).toContain('id="parisi-google-tag-config"');
+    expect(head, path).toContain(
+      'src="https://www.googletagmanager.com/gtag/js?id=AW-18513687675"',
+    );
+    expect(head, path).toContain(`gtag('config', "AW-18513687675"`);
+    const nonce = head.match(/id="parisi-google-tag-config" nonce="([^"]+)"/);
+    expect(nonce, path).not.toBeNull();
+    expect(response.headers()['content-security-policy'], path).toContain(
+      `'nonce-${nonce![1]}'`,
+    );
+  }
+});
+
+test('Google base tag loads before consent and grants measurement only after approval', async ({
+  browser,
+}) => {
+  test.skip(
+    !process.env.NEXT_PUBLIC_GOOGLE_ADS_ID,
+    'Build and run tests with the public Google tag identifiers configured.',
+  );
+  const context = await browser.newContext();
+  await context.route('https://www.googletagmanager.com/gtag/js?*', (route) =>
+    route.fulfill({
+      contentType: 'application/javascript',
+      body: 'window.__parisiGoogleTagLoads = (window.__parisiGoogleTagLoads || 0) + 1;',
+    }),
+  );
+  const page = await context.newPage();
+  const pageErrors: string[] = [];
+  const cspIssues: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  const devtools = await context.newCDPSession(page);
+  await devtools.send('Audits.enable');
+  devtools.on('Audits.issueAdded', ({ issue }) => {
+    if (issue.code === 'ContentSecurityPolicyIssue') cspIssues.push(issue.code);
+  });
+  await page.goto('/?email=private@example.com&gclid=synthetic-click');
+  await expect(page.locator('.consent-panel')).toBeVisible();
+  await expect(page.locator('head #parisi-analytics')).toHaveCount(1);
+  await expect(page.locator('#parisi-analytics')).toHaveAttribute(
+    'src',
+    'https://www.googletagmanager.com/gtag/js?id=AW-18513687675',
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __parisiGoogleTagLoads?: number })
+            .__parisiGoogleTagLoads || 0,
+      ),
+    )
+    .toBe(1);
+  const initial = await page.evaluate(() =>
+    (window.dataLayer || []).map((entry) =>
+      Array.from(entry as ArrayLike<unknown>),
+    ),
+  );
+  expect(initial[0]).toMatchObject([
+    'consent',
+    'default',
+    {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+    },
+  ]);
+  expect(initial.filter((call) => call[0] === 'event')).toHaveLength(0);
+  expect(
+    initial.find(
+      (call) => call[0] === 'config' && call[1] === 'AW-18513687675',
+    ),
+  ).toMatchObject([
+    'config',
+    'AW-18513687675',
+    { page_location: `${base}/`, page_referrer: '' },
+  ]);
+  expect(JSON.stringify(initial)).not.toContain('private@example.com');
+  expect(JSON.stringify(initial)).not.toContain('synthetic-click');
   await page.getByRole('button', { name: 'Allow analytics' }).click();
   await expect(page.locator('#parisi-analytics')).toHaveCount(1);
   const calls = await page.evaluate(() =>
@@ -476,12 +578,66 @@ test('Google base tags wait for consent and initialize the supplied Ads account'
     ),
   );
   expect(
-    calls.some((call) => call[0] === 'config' && call[1] === 'AW-18513687675'),
-  ).toBe(true);
+    calls.filter(
+      (call) => call[0] === 'config' && call[1] === 'AW-18513687675',
+    ),
+  ).toHaveLength(1);
   expect(
     calls.some((call) => call[0] === 'config' && call[1] === 'G-RRL9JLXCKK'),
   ).toBe(true);
   expect(
     calls.some((call) => call[0] === 'event' && call[1] === 'page_view'),
   ).toBe(true);
+  expect(
+    calls.find((call) => call[0] === 'consent' && call[1] === 'update'),
+  ).toMatchObject([
+    'consent',
+    'update',
+    { analytics_storage: 'granted', ad_storage: 'granted' },
+  ]);
+  await page
+    .locator('.desktop-navigation')
+    .getByRole('link', { name: 'Programs', exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/programs\?/);
+  await expect(page.locator('#parisi-analytics')).toHaveCount(1);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window.dataLayer || [])
+            .map((entry) => Array.from(entry as ArrayLike<unknown>))
+            .filter((entry) => entry[0] === 'event' && entry[1] === 'page_view')
+            .length,
+      ),
+    )
+    .toBe(2);
+  await page
+    .getByRole('button', { name: 'Cookie preferences', exact: true })
+    .click();
+  await page.getByRole('button', { name: 'Essential only' }).click();
+  const revoked = await page.evaluate(() =>
+    (window.dataLayer || [])
+      .map((entry) => Array.from(entry as ArrayLike<unknown>))
+      .filter((entry) => entry[0] === 'consent' && entry[1] === 'update')
+      .at(-1),
+  );
+  expect(revoked).toMatchObject([
+    'consent',
+    'update',
+    { analytics_storage: 'denied', ad_storage: 'denied' },
+  ]);
+  await expect(page.locator('#parisi-analytics')).toHaveCount(1);
+  const configCount = await page.evaluate(
+    () =>
+      (window.dataLayer || [])
+        .map((entry) => Array.from(entry as ArrayLike<unknown>))
+        .filter(
+          (entry) => entry[0] === 'config' && entry[1] === 'AW-18513687675',
+        ).length,
+  );
+  expect(configCount).toBe(1);
+  expect(pageErrors).toEqual([]);
+  expect(cspIssues).toEqual([]);
+  await context.close();
 });

@@ -19,7 +19,7 @@ export default function Privacy() {
           <br />
           MATTERS.
         </h1>
-        <p className="legal-intro">Privacy policy · Updated October 20, 2026</p>
+        <p className="legal-intro">Privacy policy · Updated October 21, 2026</p>
         <h2>Who this page is for</h2>
         <p>
           This evaluation request page identifies Parisi Speed School Horsham,
@@ -62,11 +62,13 @@ export default function Privacy() {
         <p>
           If you allow analytics, campaign attribution may be held in your
           browser’s session storage for up to 30 minutes, or until the tab
-          closes. Your cookie preference is stored locally for 180 days.
-          Optional Google analytics and advertising tags load only after you opt
-          in. No guardian name, email, phone number, or athlete details are
-          included in the site’s analytics events. Enhanced conversions and
-          advertising personalization are disabled by default.
+          closes. Your cookie preference is stored locally for 180 days. The
+          Google base tag loads when you visit, with analytics and advertising
+          cookie storage denied by default. It can send cookieless measurement
+          signals to Google. Allowing analytics enables measurement cookies and
+          the site’s analytics events. No guardian name, email, phone number, or
+          athlete details are included in those events. Enhanced conversions and
+          advertising personalization remain disabled.
         </p>
         <p>
           You can change your choice at any time using <PrivacySettings />.
@@ -90,11 +92,12 @@ export default function Privacy() {
         <p>
           Approved hosting, lead-handling, and security providers process
           information needed to operate this page and respond to requests. If
-          enabled with your consent, Google receives analytics and advertising
-          events. The business is responsible for the retention of submitted
-          contact information in its lead-handling system. Contact the business
-          to ask about retention, access, correction, or deletion, and any
-          rights available to you under applicable law.
+          you allow analytics, Google receives the site’s analytics and
+          advertising events; the base tag can send cookieless signals before
+          that choice. The business is responsible for the retention of
+          submitted contact information in its lead-handling system. Contact the
+          business to ask about retention, access, correction, or deletion, and
+          any rights available to you under applicable law.
         </p>
         <p>
           We do not intentionally collect children’s personal contact

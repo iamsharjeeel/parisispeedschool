@@ -1,6 +1,6 @@
 # Google Ads and measurement
 
-Production uses the user-supplied Google Ads base tag `AW-18513687675` and the existing official-site GA4 property `G-RRL9JLXCKK`. These are public tag identifiers, configured in Vercel Production. Google scripts load only after analytics consent. Contact fields never enter analytics events.
+Production uses the user-supplied Google Ads base tag `AW-18513687675` and the existing official-site GA4 property `G-RRL9JLXCKK`. These are public tag identifiers, configured in Vercel Production. The Ads tag is rendered in the initial HTML head on every page, using `gtag/js?id=AW-18513687675`, so Google installation checks can detect it without interacting with the consent banner. Consent Mode defaults deny analytics/ad cookie storage, ad user data, and personalization before configuration. The base tag may send cookieless signals; the site's analytics events and measurement storage require consent. Contact fields never enter analytics events.
 
 A confirmed webhook acceptance sends `evaluation_lead_submitted` and the standard GA4 `generate_lead` event. Direct thank-you visits do not count as leads. `click_to_call` records a phone-link click, not a connected call. Internal page views are recorded after consent, without query strings.
 

@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import localFont from 'next/font/local';
 import './globals.css';
 import { Analytics } from '@/components/analytics';
+import { GoogleTag } from '@/components/google-tag';
 import { Header, Footer, MobileActions } from '@/components/ui';
 import { siteIsPublic, siteUrl } from '@/lib/config';
 import { assets } from '@/lib/assets';
@@ -61,6 +62,9 @@ export default async function RootLayout({
   const nonce = (await headers()).get('x-nonce') || '';
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>
+      <head>
+        <GoogleTag nonce={nonce} />
+      </head>
       <body>
         <a href="#main" className="skip-link">
           Skip to content

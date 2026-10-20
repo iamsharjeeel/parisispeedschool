@@ -10,58 +10,38 @@ import { CampaignLink as Link } from '@/components/campaign-link';
 import { usePathname } from 'next/navigation';
 import { analyticsAllowed, attribution, track } from '@/lib/tracking';
 function loadAnalytics(nonce: string) {
-  if (document.getElementById('parisi-analytics')) return;
   const gtm = process.env.NEXT_PUBLIC_GTM_ID;
-  const ga = process.env.NEXT_PUBLIC_GA4_ID;
-  const ads = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
-  if (!gtm && !ga && !ads) return;
+  const loadContainer =
+    Boolean(gtm && /^GTM-[A-Z0-9]+$/.test(gtm)) &&
+    !document.getElementById('parisi-analytics');
+  // Direct Google tags are already present in the head with denied storage.
+  if (!window.gtag && !loadContainer) return;
   window.dataLayer = window.dataLayer || [];
   // This is Google's documented queue format; gtag reads Arguments objects.
   window.gtag ||= function () {
     // eslint-disable-next-line prefer-rest-params
     window.dataLayer!.push(arguments);
   };
-  window.gtag('consent', 'default', {
-    analytics_storage: 'denied',
-    ad_storage: 'denied',
-    ad_user_data: 'denied',
-    ad_personalization: 'denied',
-  });
+  if (loadContainer)
+    window.gtag('consent', 'default', {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+    });
   window.gtag('consent', 'update', {
     analytics_storage: 'granted',
     ad_storage: 'granted',
     ad_user_data: 'denied',
     ad_personalization: 'denied',
   });
+  if (!loadContainer) return;
   const script = document.createElement('script');
   script.id = 'parisi-analytics';
   script.async = true;
   script.nonce = nonce;
-  if (gtm && /^GTM-[A-Z0-9]+$/.test(gtm)) {
-    window.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' });
-    script.src = `https://www.googletagmanager.com/gtm.js?id=${gtm}`;
-  } else {
-    const id = ga || ads;
-    if (!id || !/^(G|AW)-[A-Z0-9]+$/.test(id)) return;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${id}`;
-    window.gtag('js', new Date());
-    // Strip all query strings: they may contain contact information added by visitors.
-    const page_location = `${location.origin}${location.pathname}`;
-    if (ga && /^G-[A-Z0-9]+$/.test(ga))
-      window.gtag('config', ga, {
-        send_page_view: false,
-        page_location,
-        page_referrer: '',
-        allow_google_signals: false,
-        allow_ad_personalization_signals: false,
-      });
-    if (ads && /^AW-\d+$/.test(ads))
-      window.gtag('config', ads, {
-        page_location,
-        page_referrer: '',
-        allow_ad_personalization_signals: false,
-      });
-  }
+  window.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' });
+  script.src = `https://www.googletagmanager.com/gtm.js?id=${gtm}`;
   document.head.appendChild(script);
 }
 export function Analytics({ nonce }: { nonce: string }) {
@@ -147,7 +127,11 @@ export function Analytics({ nonce }: { nonce: string }) {
       attribution();
       pageView();
     }
-    if (!allowed && document.getElementById('parisi-analytics'))
+    if (
+      !allowed &&
+      process.env.NEXT_PUBLIC_GTM_ID &&
+      document.getElementById('parisi-analytics')
+    )
       location.reload();
   };
   const configured = Boolean(
@@ -161,9 +145,10 @@ export function Analytics({ nonce }: { nonce: string }) {
       <div>
         <strong>Your privacy. Your choice.</strong>
         <p>
-          With your permission, we use analytics and advertising cookies to
-          understand visits and evaluation requests. Your choice won’t affect
-          your request. <Link href="/privacy">Privacy policy</Link>
+          We use Google’s tag with cookie storage denied by default. Allow
+          analytics and advertising cookies to help us understand visits and
+          evaluation requests. Your choice won’t affect your request.{' '}
+          <Link href="/privacy">Privacy policy</Link>
         </p>
       </div>
       <div className="consent-actions">

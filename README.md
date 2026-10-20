@@ -8,7 +8,7 @@ Production: https://parisispeedschool.vercel.app
 
 Use Node 24 and `npm ci`, then `npm run dev`. Run `npm run lint`, `npm test`, and `npm run build`. Run `CHROMIUM_PATH=/usr/bin/chromium npm run test:e2e` against the production build; Playwright starts a local synthetic webhook. It never sends leads to the business CRM. The managed workspace blocks the external logo CDN, so tests validate its URL and transparent wrapper and verify locally hosted coach images separately.
 
-For Google tag integration tests, build with the public identifiers configured (`NEXT_PUBLIC_GOOGLE_ADS_ID=AW-18513687675` and `NEXT_PUBLIC_GA4_ID=G-RRL9JLXCKK`). These identifiers are not secrets. Without them, the tag-specific browser test is skipped.
+For Google tag integration tests, build and run the tests with the public identifiers configured (`NEXT_PUBLIC_GOOGLE_ADS_ID=AW-18513687675` and `NEXT_PUBLIC_GA4_ID=G-RRL9JLXCKK`). These identifiers are not secrets. Without them, the tag-specific browser tests are skipped.
 
 ## Production settings
 
