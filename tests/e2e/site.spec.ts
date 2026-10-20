@@ -216,6 +216,9 @@ test('confirmed lead preserves attribution, fires one event, and shows signed re
   expect(JSON.stringify(events)).not.toContain('Test Guardian');
   const received = (await (await request.get(`${fixture}/leads`)).json()).leads;
   expect(received).toHaveLength(1);
+  // GTM's Data Layer Variable `event_id` must supply the Ads transaction ID.
+  expect(events.filter((e) => e[1] === 'evaluation_lead_submitted')[0][2])
+    .toMatchObject({ event_id: received[0].eventId });
   expect(received[0].attribution).toMatchObject({
     gclid: 'synthetic-click',
     utm_campaign: 'test-campaign',
@@ -253,6 +256,29 @@ test('confirmed lead preserves attribution, fires one event, and shows signed re
     reloaded.filter((e) => e[1] === 'evaluation_lead_submitted'),
   ).toHaveLength(0);
 });
+for (const allowed of [true, false]) {
+  test(`mock webhook acceptance with blocked sessionStorage and consent ${allowed}`, async ({ page, request }) => {
+    await page.goto('/');
+    await page.evaluate((allowed) => {
+      localStorage.setItem('parisi-consent', JSON.stringify({ allowed, at: Date.now() }));
+      Object.defineProperty(window, 'sessionStorage', {
+        configurable: true,
+        get() { throw new DOMException('Storage blocked', 'SecurityError'); },
+      });
+    }, allowed);
+    await completeForm(page);
+    await page.getByRole('button', { name: 'Request my free evaluation' }).click();
+    await expect(page).toHaveURL(/\/thank-you$/);
+    await expect(page.getByRole('heading', { name: /REQUEST RECEIVED/ })).toBeVisible();
+    const received = (await (await request.get(`${fixture}/leads`)).json()).leads;
+    expect(received).toHaveLength(1);
+    const events = (await recordedAnalytics(page)).filter((e) => e[1] === 'evaluation_lead_submitted');
+    expect(events).toHaveLength(allowed ? 1 : 0);
+    if (allowed) expect(events[0][2]).toMatchObject({ event_id: received[0].eventId });
+    await page.reload();
+    expect((await recordedAnalytics(page)).filter((e) => e[1] === 'evaluation_lead_submitted')).toHaveLength(0);
+  });
+}
 test('direct thank-you visits cannot claim success or record conversions', async ({
   page,
 }) => {

@@ -38,13 +38,44 @@ describe('confirmed lead dataLayer events', () => {
     track('evaluation_lead_submitted', { event_id: 'accepted-lead' });
     expect(window.dataLayer).toEqual([]);
   });
-  it('avoids duplicate-prone conversions when deduplication storage fails', () => {
+  it('emits once per accepted ID when deduplication storage reads fail', () => {
     vi.stubGlobal('sessionStorage', {
       getItem: () => {
         throw new Error('blocked');
       },
     });
     track('evaluation_lead_submitted', { event_id: 'accepted-lead' });
-    expect(window.dataLayer).toEqual([]);
+    track('evaluation_lead_submitted', { event_id: 'accepted-lead' });
+    track('evaluation_lead_submitted', { event_id: 'another-lead' });
+    expect(window.dataLayer).toEqual([
+      { event: 'evaluation_lead_submitted', event_id: 'accepted-lead' },
+      { event: 'evaluation_lead_submitted', event_id: 'another-lead' },
+    ]);
   });
+  it('emits once when deduplication storage writes fail', () => {
+    vi.stubGlobal('sessionStorage', {
+      getItem: () => null,
+      setItem: () => { throw new Error('quota'); },
+    });
+    track('evaluation_lead_submitted', { event_id: 'accepted-lead' });
+    track('evaluation_lead_submitted', { event_id: 'accepted-lead' });
+    expect(window.dataLayer).toHaveLength(1);
+  });
+  it('does not mark a lead before the event is successfully queued', () => {
+    window.dataLayer = [];
+    vi.spyOn(window.dataLayer, 'push').mockImplementationOnce(() => {
+      throw new Error('queue unavailable');
+    });
+    expect(() => track('evaluation_lead_submitted', { event_id: 'accepted-lead' })).toThrow();
+    track('evaluation_lead_submitted', { event_id: 'accepted-lead' });
+    expect(window.dataLayer).toHaveLength(1);
+  });
+  it.each([null, { allowed: false, at: Date.now() }, { allowed: true, at: 0 }])(
+    'requires current consent even if sessionStorage is blocked (%j)', (choice) => {
+      vi.stubGlobal('localStorage', { getItem: () => JSON.stringify(choice) });
+      vi.stubGlobal('sessionStorage', { getItem: () => { throw new Error('blocked'); } });
+      track('evaluation_lead_submitted', { event_id: 'accepted-lead' });
+      expect(window.dataLayer).toEqual([]);
+    },
+  );
 });

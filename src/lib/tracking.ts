@@ -19,6 +19,9 @@ export function analyticsAllowed() {
     return false;
   }
 }
+// Keep deduplication working when browsers block sessionStorage. Scope the
+// fallback to this window; no conversions are replayed on the receipt page.
+const emittedConversions = new WeakMap<Window, Set<string>>();
 export function track(
   event: AnalyticsEvent,
   extra: { event_id?: string; placement?: string } = {},
@@ -26,13 +29,24 @@ export function track(
   if (!analyticsAllowed()) return;
   if (event === 'evaluation_lead_submitted') {
     if (!extra.event_id) return;
+    const emitted = emittedConversions.get(window) || new Set<string>();
+    emittedConversions.set(window, emitted);
+    if (emitted.has(extra.event_id)) return;
     try {
       const key = `parisi-conversion:${extra.event_id}`;
       if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, '1');
     } catch {
-      return;
-    } // No deduplication storage: do not risk duplicate conversions.
+      // Storage is optional; in-memory deduplication still prevents repeats.
+    }
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ event, ...extra });
+    emitted.add(extra.event_id);
+    try {
+      sessionStorage.setItem(`parisi-conversion:${extra.event_id}`, '1');
+    } catch {
+      // The event was queued and is already deduplicated in memory.
+    }
+    return;
   }
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({ event, ...extra });
