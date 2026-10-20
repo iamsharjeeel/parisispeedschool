@@ -10,7 +10,7 @@ export function proxy(request: NextRequest) {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https://assets.cdn.filesafe.space https://www.google-analytics.com https://www.googletagmanager.com https://www.googleadservices.com https://www.google.com https://googleads.g.doubleclick.net",
     "font-src 'self'",
-    `connect-src 'self' https://*.google-analytics.com https://www.googletagmanager.com https://www.googleadservices.com https://www.google.com https://googleads.g.doubleclick.net${dev ? ' ws: wss:' : ''}`,
+    `connect-src 'self' https://*.google-analytics.com https://www.googletagmanager.com https://www.googleadservices.com https://www.google.com https://googleads.g.doubleclick.net https://paged2.googlesyndication.com${dev ? ' ws: wss:' : ''}`,
     'frame-src https://www.googletagmanager.com https://www.google.com',
     "object-src 'none'",
     "base-uri 'self'",
