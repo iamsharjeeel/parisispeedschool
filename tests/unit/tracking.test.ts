@@ -1,0 +1,50 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { track } from '../../src/lib/tracking';
+
+beforeEach(() => {
+  const storage = new Map<string, string>();
+  vi.stubGlobal('window', { dataLayer: [] });
+  vi.stubGlobal('localStorage', {
+    getItem: () => JSON.stringify({ allowed: true, at: Date.now() }),
+  });
+  vi.stubGlobal('sessionStorage', {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+  });
+  vi.stubEnv('NEXT_PUBLIC_GTM_ID', undefined);
+  vi.stubEnv('NEXT_PUBLIC_GA4_ID', undefined);
+  vi.stubEnv('NEXT_PUBLIC_GOOGLE_ADS_ID', undefined);
+});
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
+
+describe('confirmed lead dataLayer events', () => {
+  it('pushes the confirmed event without any tag environment variables', () => {
+    track('evaluation_lead_submitted', { event_id: 'accepted-lead' });
+    expect(window.dataLayer).toEqual([
+      { event: 'evaluation_lead_submitted', event_id: 'accepted-lead' },
+    ]);
+  });
+  it('deduplicates by the server event ID and requires that ID', () => {
+    track('evaluation_lead_submitted', { event_id: 'accepted-lead' });
+    track('evaluation_lead_submitted', { event_id: 'accepted-lead' });
+    track('evaluation_lead_submitted');
+    expect(window.dataLayer).toHaveLength(1);
+  });
+  it('does not emit a conversion without analytics consent', () => {
+    vi.stubGlobal('localStorage', { getItem: () => null });
+    track('evaluation_lead_submitted', { event_id: 'accepted-lead' });
+    expect(window.dataLayer).toEqual([]);
+  });
+  it('avoids duplicate-prone conversions when deduplication storage fails', () => {
+    vi.stubGlobal('sessionStorage', {
+      getItem: () => {
+        throw new Error('blocked');
+      },
+    });
+    track('evaluation_lead_submitted', { event_id: 'accepted-lead' });
+    expect(window.dataLayer).toEqual([]);
+  });
+});

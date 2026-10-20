@@ -24,7 +24,8 @@ export function track(
   extra: { event_id?: string; placement?: string } = {},
 ) {
   if (!analyticsAllowed()) return;
-  if (event === 'evaluation_lead_submitted' && extra.event_id) {
+  if (event === 'evaluation_lead_submitted') {
+    if (!extra.event_id) return;
     try {
       const key = `parisi-conversion:${extra.event_id}`;
       if (sessionStorage.getItem(key)) return;
@@ -33,40 +34,8 @@ export function track(
       return;
     } // No deduplication storage: do not risk duplicate conversions.
   }
-  if (process.env.NEXT_PUBLIC_GTM_ID) {
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({ event, ...extra });
-  } else {
-    window.gtag?.('event', event, { ...extra });
-    if (
-      event === 'evaluation_lead_submitted' &&
-      process.env.NEXT_PUBLIC_GA4_ID
-    ) {
-      window.gtag?.('event', 'generate_lead', {
-        ...extra,
-        send_to: process.env.NEXT_PUBLIC_GA4_ID,
-      });
-    }
-    if (
-      event === 'evaluation_lead_submitted' &&
-      process.env.NEXT_PUBLIC_GOOGLE_ADS_ID &&
-      process.env.NEXT_PUBLIC_GOOGLE_ADS_LABEL
-    ) {
-      window.gtag?.('event', 'conversion', {
-        send_to: `${process.env.NEXT_PUBLIC_GOOGLE_ADS_ID}/${process.env.NEXT_PUBLIC_GOOGLE_ADS_LABEL}`,
-        transaction_id: extra.event_id,
-      });
-    }
-    if (
-      event === 'click_to_call' &&
-      process.env.NEXT_PUBLIC_GOOGLE_ADS_ID &&
-      process.env.NEXT_PUBLIC_GOOGLE_ADS_CALL_LABEL
-    ) {
-      window.gtag?.('event', 'conversion', {
-        send_to: `${process.env.NEXT_PUBLIC_GOOGLE_ADS_ID}/${process.env.NEXT_PUBLIC_GOOGLE_ADS_CALL_LABEL}`,
-      });
-    }
-  }
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({ event, ...extra });
 }
 export function attribution() {
   const current = Object.fromEntries(

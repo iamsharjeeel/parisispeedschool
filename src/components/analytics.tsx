@@ -9,61 +9,26 @@ import {
 import { CampaignLink as Link } from '@/components/campaign-link';
 import { usePathname } from 'next/navigation';
 import { analyticsAllowed, attribution, track } from '@/lib/tracking';
-function loadAnalytics(nonce: string) {
-  const gtm = process.env.NEXT_PUBLIC_GTM_ID;
-  const loadContainer =
-    Boolean(gtm && /^GTM-[A-Z0-9]+$/.test(gtm)) &&
-    !document.getElementById('parisi-analytics');
-  // Direct Google tags are already present in the head with denied storage.
-  if (!window.gtag && !loadContainer) return;
-  window.dataLayer = window.dataLayer || [];
-  // This is Google's documented queue format; gtag reads Arguments objects.
-  window.gtag ||= function () {
-    // eslint-disable-next-line prefer-rest-params
-    window.dataLayer!.push(arguments);
-  };
-  if (loadContainer)
-    window.gtag('consent', 'default', {
-      analytics_storage: 'denied',
-      ad_storage: 'denied',
-      ad_user_data: 'denied',
-      ad_personalization: 'denied',
-    });
-  window.gtag('consent', 'update', {
+function enableAnalytics() {
+  window.gtag?.('consent', 'update', {
     analytics_storage: 'granted',
     ad_storage: 'granted',
     ad_user_data: 'denied',
     ad_personalization: 'denied',
   });
-  if (!loadContainer) return;
-  const script = document.createElement('script');
-  script.id = 'parisi-analytics';
-  script.async = true;
-  script.nonce = nonce;
-  window.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' });
-  script.src = `https://www.googletagmanager.com/gtm.js?id=${gtm}`;
-  document.head.appendChild(script);
 }
-export function Analytics({ nonce }: { nonce: string }) {
+export function Analytics() {
   const pathname = usePathname();
   const lastPageView = useRef('');
   const pageView = useCallback(() => {
     if (!analyticsAllowed() || lastPageView.current === pathname) return;
     const page_location = `${location.origin}${pathname}`;
-    if (process.env.NEXT_PUBLIC_GTM_ID) {
-      window.dataLayer = window.dataLayer || [];
-      window.dataLayer.push({
-        event: 'virtual_page_view',
-        page_location,
-        page_title: document.title,
-      });
-    } else {
-      window.gtag?.('event', 'page_view', {
-        page_location,
-        page_title: document.title,
-        page_referrer: '',
-      });
-    }
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: 'virtual_page_view',
+      page_location,
+      page_title: document.title,
+    });
     lastPageView.current = pathname;
   }, [pathname]);
   const [open, setOpen] = useState(false);
@@ -75,7 +40,7 @@ export function Analytics({ nonce }: { nonce: string }) {
   );
   useEffect(() => {
     if (analyticsAllowed()) {
-      loadAnalytics(nonce);
+      enableAnalytics();
       attribution();
       pageView();
     }
@@ -92,7 +57,7 @@ export function Analytics({ nonce }: { nonce: string }) {
       window.removeEventListener('parisi:privacy', preferences);
       document.removeEventListener('click', click);
     };
-  }, [nonce, pageView]);
+  }, [pageView]);
   const choose = (allowed: boolean) => {
     try {
       localStorage.setItem(
@@ -123,23 +88,13 @@ export function Analytics({ nonce }: { nonce: string }) {
     setOpen(false);
     setDismissed(true);
     if (allowed && analyticsAllowed()) {
-      loadAnalytics(nonce);
+      enableAnalytics();
       attribution();
       pageView();
     }
-    if (
-      !allowed &&
-      process.env.NEXT_PUBLIC_GTM_ID &&
-      document.getElementById('parisi-analytics')
-    )
-      location.reload();
+    if (!allowed) location.reload();
   };
-  const configured = Boolean(
-    process.env.NEXT_PUBLIC_GTM_ID ||
-      process.env.NEXT_PUBLIC_GA4_ID ||
-      process.env.NEXT_PUBLIC_GOOGLE_ADS_ID,
-  );
-  if (!open && (dismissed || hasChoice || !configured)) return null;
+  if (!open && (dismissed || hasChoice)) return null;
   return (
     <section className="consent-panel" aria-label="Cookie preferences">
       <div>

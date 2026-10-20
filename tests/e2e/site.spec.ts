@@ -26,6 +26,17 @@ async function completeForm(page: Page) {
   await page.getByLabel('Primary sport').fill('Soccer');
   await page.locator('#consent').check();
 }
+async function recordedAnalytics(page: Page) {
+  return page.evaluate(() => [
+    ...((window as unknown as { recordedEvents: unknown[][] }).recordedEvents ||
+      []),
+    ...(window.dataLayer || []).flatMap((entry) =>
+      entry && typeof entry === 'object' && 'event' in entry
+        ? [['event', entry.event, entry]]
+        : [],
+    ),
+  ]);
+}
 test.beforeEach(async ({ request, page }) => {
   await request.post(`${fixture}/reset`, { data: {} });
   await page.addInitScript(() =>
@@ -34,11 +45,13 @@ test.beforeEach(async ({ request, page }) => {
       JSON.stringify({ allowed: false, at: Date.now() }),
     ),
   );
-  await page.route('https://www.googletagmanager.com/gtag/js?*', (route) =>
-    route.fulfill({
-      contentType: 'application/javascript',
-      body: '/* Google script isolated in local integration tests; queue calls remain observable. */',
-    }),
+  await page.route(
+    /https:\/\/www\.googletagmanager\.com\/(?:gtag\/js|gtm\.js)\?/,
+    (route) =>
+      route.fulfill({
+        contentType: 'application/javascript',
+        body: '/* Google script isolated in local integration tests; queue calls remain observable. */',
+      }),
   );
 });
 
@@ -195,9 +208,7 @@ test('confirmed lead preserves attribution, fires one event, and shows signed re
   await expect(
     page.getByRole('heading', { name: /REQUEST RECEIVED/ }),
   ).toBeVisible();
-  const events = await page.evaluate(
-    () => (window as unknown as { recordedEvents: unknown[][] }).recordedEvents,
-  );
+  const events = await recordedAnalytics(page);
   expect(
     events.filter((e) => e[1] === 'evaluation_lead_submitted'),
   ).toHaveLength(1);
@@ -237,9 +248,7 @@ test('confirmed lead preserves attribution, fires one event, and shows signed re
   expect(received[0]).not.toHaveProperty('contactMethod');
   expect(received[0].idempotencyKey).toBe(received[0].submissionId);
   await page.reload();
-  const reloaded = await page.evaluate(
-    () => (window as unknown as { recordedEvents: unknown[][] }).recordedEvents,
-  );
+  const reloaded = await recordedAnalytics(page);
   expect(
     reloaded.filter((e) => e[1] === 'evaluation_lead_submitted'),
   ).toHaveLength(0);
@@ -274,11 +283,11 @@ test('declining consent keeps analytics and attribution storage off', async ({
     await page.evaluate(() => sessionStorage.getItem('parisi-attribution')),
   ).toBeNull();
   const loaders = await page
-    .locator('script[src^="https://www.googletagmanager.com/gtag/js"]')
+    .locator('script[src^="https://www.googletagmanager.com/"]')
     .evaluateAll((scripts) =>
       scripts.map((script) => (script as HTMLScriptElement).src),
     );
-  expect(external).toEqual(loaders);
+  expect([...new Set(external)]).toEqual(loaders);
   const events = await page.evaluate(() =>
     (window.dataLayer || [])
       .map((entry) => Array.from(entry as ArrayLike<unknown>))
@@ -357,6 +366,12 @@ test('CRM errors re-enable the submit button and allow retry', async ({
 }) => {
   await request.post(`${fixture}/mode`, { data: { mode: 'failure' } });
   await page.goto('/');
+  await page
+    .getByRole('button', { name: 'Cookie preferences', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Allow analytics', exact: true })
+    .click();
   await completeForm(page);
   await page
     .getByRole('button', { name: 'Request my free evaluation' })
@@ -366,6 +381,11 @@ test('CRM errors re-enable the submit button and allow retry', async ({
   );
   await expect(page).not.toHaveURL(/thank-you/);
   expect(
+    (await recordedAnalytics(page)).filter(
+      (entry) => entry[1] === 'evaluation_lead_submitted',
+    ),
+  ).toHaveLength(0);
+  expect(
     (await (await request.get(`${fixture}/leads`)).json()).leads,
   ).toHaveLength(0);
   await request.post(`${fixture}/mode`, { data: { mode: 'success' } });
@@ -373,6 +393,11 @@ test('CRM errors re-enable the submit button and allow retry', async ({
     .getByRole('button', { name: 'Request my free evaluation' })
     .click();
   await expect(page).toHaveURL(/thank-you/);
+  expect(
+    (await recordedAnalytics(page)).filter(
+      (entry) => entry[1] === 'evaluation_lead_submitted',
+    ),
+  ).toHaveLength(1);
 });
 test('CRM timeout shows an error and allows retry', async ({ request }) => {
   await request.post(`${fixture}/mode`, { data: { mode: 'timeout' } });
@@ -469,13 +494,9 @@ test('campaign context survives internal navigation without analytics storage', 
   });
 });
 
-test('Google Ads base tag is present in the initial head on every page', async ({
+test('only the supplied GTM container is installed in the head and immediately after body', async ({
   request,
 }) => {
-  test.skip(
-    !process.env.NEXT_PUBLIC_GOOGLE_ADS_ID,
-    'Build and run tests with the public Google tag identifiers configured.',
-  );
   for (const path of [
     '/',
     '/programs',
@@ -490,65 +511,54 @@ test('Google Ads base tag is present in the initial head on every page', async (
     '/thank-you',
   ]) {
     const response = await request.get(path);
-    const head = (await response.text()).split('</head>')[0];
-    expect(head, path).toContain('id="parisi-google-tag-config"');
-    expect(head, path).toContain(
-      'src="https://www.googletagmanager.com/gtag/js?id=AW-18513687675"',
+    const html = await response.text();
+    const head = html.split('</head>')[0];
+    expect(head, path).toContain('GTM-KP59SXS6');
+    expect(head, path).toContain('https://www.googletagmanager.com/gtm.js?id=');
+    const bodyStart = html.match(/<body[^>]*>([\s\S]{0,500})/)?.[1] || '';
+    // Next inserts its hidden streaming boundary before authored body content.
+    expect(bodyStart, path).toMatch(
+      /^(?:<div hidden="">[\s\S]*?<\/div>)?<noscript><iframe src="https:\/\/www.googletagmanager.com\/ns.html\?id=GTM-KP59SXS6"/,
     );
-    expect(head, path).toContain(`gtag('config', "AW-18513687675"`);
-    const nonce = head.match(/id="parisi-google-tag-config" nonce="([^"]+)"/);
-    expect(nonce, path).not.toBeNull();
-    expect(response.headers()['content-security-policy'], path).toContain(
-      `'nonce-${nonce![1]}'`,
-    );
+    expect(html, path).not.toContain('AW-18513687675');
+    expect(html, path).not.toContain('G-RRL9JLXCKK');
+    expect(html, path).not.toContain('googletagmanager.com/gtag/js');
   }
 });
 
-test('Google base tag loads before consent and grants measurement only after approval', async ({
+test('the supplied GTM head snippet executes once without CSP errors or duplicate loaders', async ({
   browser,
 }) => {
-  test.skip(
-    !process.env.NEXT_PUBLIC_GOOGLE_ADS_ID,
-    'Build and run tests with the public Google tag identifiers configured.',
-  );
   const context = await browser.newContext();
-  await context.route('https://www.googletagmanager.com/gtag/js?*', (route) =>
+  await context.route('https://www.googletagmanager.com/gtm.js?*', (route) =>
     route.fulfill({
       contentType: 'application/javascript',
-      body: 'window.__parisiGoogleTagLoads = (window.__parisiGoogleTagLoads || 0) + 1;',
+      body: 'window.__parisiGtmLoads = (window.__parisiGtmLoads || 0) + 1;',
     }),
   );
   const page = await context.newPage();
-  const pageErrors: string[] = [];
+  const errors: string[] = [];
   const cspIssues: string[] = [];
-  page.on('pageerror', (error) => pageErrors.push(error.message));
+  page.on('pageerror', (error) => errors.push(error.message));
   const devtools = await context.newCDPSession(page);
   await devtools.send('Audits.enable');
   devtools.on('Audits.issueAdded', ({ issue }) => {
     if (issue.code === 'ContentSecurityPolicyIssue') cspIssues.push(issue.code);
   });
-  await page.goto('/?email=private@example.com&gclid=synthetic-click');
-  await expect(page.locator('.consent-panel')).toBeVisible();
-  await expect(page.locator('head #parisi-analytics')).toHaveCount(1);
-  await expect(page.locator('#parisi-analytics')).toHaveAttribute(
-    'src',
-    'https://www.googletagmanager.com/gtag/js?id=AW-18513687675',
-  );
+  await page.goto('/');
   await expect
     .poll(() =>
       page.evaluate(
         () =>
-          (window as unknown as { __parisiGoogleTagLoads?: number })
-            .__parisiGoogleTagLoads || 0,
+          (window as unknown as { __parisiGtmLoads?: number })
+            .__parisiGtmLoads || 0,
       ),
     )
     .toBe(1);
-  const initial = await page.evaluate(() =>
-    (window.dataLayer || []).map((entry) =>
-      Array.from(entry as ArrayLike<unknown>),
-    ),
+  const defaults = await page.evaluate(() =>
+    Array.from((window.dataLayer || [])[0] as ArrayLike<unknown>),
   );
-  expect(initial[0]).toMatchObject([
+  expect(defaults).toMatchObject([
     'consent',
     'default',
     {
@@ -558,86 +568,47 @@ test('Google base tag loads before consent and grants measurement only after app
       ad_personalization: 'denied',
     },
   ]);
-  expect(initial.filter((call) => call[0] === 'event')).toHaveLength(0);
-  expect(
-    initial.find(
-      (call) => call[0] === 'config' && call[1] === 'AW-18513687675',
-    ),
-  ).toMatchObject([
-    'config',
-    'AW-18513687675',
-    { page_location: `${base}/`, page_referrer: '' },
-  ]);
-  expect(JSON.stringify(initial)).not.toContain('private@example.com');
-  expect(JSON.stringify(initial)).not.toContain('synthetic-click');
-  await page.getByRole('button', { name: 'Allow analytics' }).click();
-  await expect(page.locator('#parisi-analytics')).toHaveCount(1);
-  const calls = await page.evaluate(() =>
-    (window.dataLayer || []).map((entry) =>
-      Array.from(entry as ArrayLike<unknown>),
-    ),
+  await expect(
+    page.locator('script[src*="googletagmanager.com/gtm.js"]'),
+  ).toHaveAttribute(
+    'src',
+    'https://www.googletagmanager.com/gtm.js?id=GTM-KP59SXS6',
   );
-  expect(
-    calls.filter(
-      (call) => call[0] === 'config' && call[1] === 'AW-18513687675',
-    ),
-  ).toHaveLength(1);
-  expect(
-    calls.some((call) => call[0] === 'config' && call[1] === 'G-RRL9JLXCKK'),
-  ).toBe(true);
-  expect(
-    calls.some((call) => call[0] === 'event' && call[1] === 'page_view'),
-  ).toBe(true);
-  expect(
-    calls.find((call) => call[0] === 'consent' && call[1] === 'update'),
-  ).toMatchObject([
-    'consent',
-    'update',
-    { analytics_storage: 'granted', ad_storage: 'granted' },
-  ]);
   await page
-    .locator('.desktop-navigation')
-    .getByRole('link', { name: 'Programs', exact: true })
+    .getByRole('button', { name: 'Allow analytics', exact: true })
     .click();
-  await expect(page).toHaveURL(/\/programs\?/);
-  await expect(page.locator('#parisi-analytics')).toHaveCount(1);
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          (window.dataLayer || [])
-            .map((entry) => Array.from(entry as ArrayLike<unknown>))
-            .filter((entry) => entry[0] === 'event' && entry[1] === 'page_view')
-            .length,
-      ),
-    )
-    .toBe(2);
-  await page
-    .getByRole('button', { name: 'Cookie preferences', exact: true })
-    .click();
-  await page.getByRole('button', { name: 'Essential only' }).click();
-  const revoked = await page.evaluate(() =>
+  const updated = await page.evaluate(() =>
     (window.dataLayer || [])
       .map((entry) => Array.from(entry as ArrayLike<unknown>))
       .filter((entry) => entry[0] === 'consent' && entry[1] === 'update')
       .at(-1),
   );
-  expect(revoked).toMatchObject([
+  expect(updated).toMatchObject([
     'consent',
     'update',
-    { analytics_storage: 'denied', ad_storage: 'denied' },
+    {
+      analytics_storage: 'granted',
+      ad_storage: 'granted',
+    },
   ]);
-  await expect(page.locator('#parisi-analytics')).toHaveCount(1);
-  const configCount = await page.evaluate(
-    () =>
-      (window.dataLayer || [])
-        .map((entry) => Array.from(entry as ArrayLike<unknown>))
-        .filter(
-          (entry) => entry[0] === 'config' && entry[1] === 'AW-18513687675',
-        ).length,
-  );
-  expect(configCount).toBe(1);
-  expect(pageErrors).toEqual([]);
+  await page
+    .locator('.desktop-navigation')
+    .getByRole('link', { name: 'Programs', exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/programs$/);
+  await expect(
+    page.locator('script[src*="googletagmanager.com/gtm.js"]'),
+  ).toHaveCount(1);
+  await expect(
+    page.locator('script[src*="googletagmanager.com/gtag/js"]'),
+  ).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { __parisiGtmLoads?: number }).__parisiGtmLoads,
+    ),
+  ).toBe(1);
+  expect(errors).toEqual([]);
   expect(cspIssues).toEqual([]);
   await context.close();
 });

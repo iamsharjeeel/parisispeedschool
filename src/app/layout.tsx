@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import localFont from 'next/font/local';
 import './globals.css';
 import { Analytics } from '@/components/analytics';
-import { GoogleTag } from '@/components/google-tag';
+import { GoogleTag, GoogleTagBody } from '@/components/google-tag';
 import { Header, Footer, MobileActions } from '@/components/ui';
 import { siteIsPublic, siteUrl } from '@/lib/config';
 import { assets } from '@/lib/assets';
@@ -66,6 +66,7 @@ export default async function RootLayout({
         <GoogleTag nonce={nonce} />
       </head>
       <body>
+        <GoogleTagBody />
         <a href="#main" className="skip-link">
           Skip to content
         </a>
@@ -73,7 +74,7 @@ export default async function RootLayout({
         {children}
         <Footer />
         <MobileActions />
-        <Analytics nonce={nonce} />
+        <Analytics />
       </body>
     </html>
   );
