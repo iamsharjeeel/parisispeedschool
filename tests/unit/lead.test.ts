@@ -12,7 +12,6 @@ const valid = {
   phone: '(215) 555-0123',
   ageGroup: '5–11',
   sport: 'Soccer',
-  contactMethod: 'Email',
   consent: true,
   website: '',
   submissionId: '123e4567-e89b-42d3-a456-426614174000',
@@ -124,7 +123,6 @@ describe('Direct webhook delivery', () => {
       phone: valid.phone,
       ageGroup: valid.ageGroup,
       sport: valid.sport,
-      contactMethod: valid.contactMethod,
       consent: true,
     });
     expect(validReceipt(createReceipt(result.eventId))).toBe(true);

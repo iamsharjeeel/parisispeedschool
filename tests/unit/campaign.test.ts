@@ -58,7 +58,6 @@ describe('campaign navigation', () => {
       phone: '2155550123',
       ageGroup: '5–11',
       sport: 'Soccer',
-      contactMethod: 'Email',
       consent: true,
       website: '',
       submissionId: '123e4567-e89b-42d3-a456-426614174000',

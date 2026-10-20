@@ -10,7 +10,7 @@ The webhook gets `Content-Type: application/json`, `Accept: application/json`, a
 
 In Vercel, keep the supplied webhook URL in the variable already configured, select the deployment's environment scope, and redeploy the latest feature-branch commit. The private URL is not committed or included in browser code.
 
-All visible form fields use their original names at the top level for LeadConnector field mapping: `guardianName`, `email`, `phone`, `ageGroup`, `sport`, `contactMethod`, and `consent`. `analyticsConsent` and every supported campaign parameter are also included. Blank sport stays an empty string; absent campaign values are `null`. The hidden spam honeypot is validated locally/server-side and never forwarded. Map the email and phone fields to the workflow's contact fields and the remaining fields to the corresponding custom fields or workflow actions.
+All visible form fields use their original names at the top level for LeadConnector field mapping: `guardianName`, `email`, `phone`, `ageGroup`, `sport`, and `consent`. `analyticsConsent` and every supported campaign parameter are also included. Blank sport stays an empty string; absent campaign values are `null`. The hidden spam honeypot is validated locally/server-side and never forwarded. Map the email and phone fields to the workflow's contact fields and the remaining fields to the corresponding custom fields or workflow actions.
 
 Payload example (synthetic data only):
 
@@ -25,7 +25,6 @@ Payload example (synthetic data only):
   "phone": "2155550123",
   "ageGroup": "5–11",
   "sport": "Soccer",
-  "contactMethod": "Email",
   "consent": true,
   "analyticsConsent": false,
   "gclid": "synthetic-click",

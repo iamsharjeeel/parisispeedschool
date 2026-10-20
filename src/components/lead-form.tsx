@@ -25,7 +25,6 @@ export function LeadForm() {
       email: '',
       phone: '',
       sport: '',
-      contactMethod: 'No preference',
       website: '',
       consent: false,
     },
@@ -181,16 +180,6 @@ export function LeadForm() {
             {...a11y('sport')}
           />
           {error('sport')}
-        </div>
-        <div className="field full">
-          <label htmlFor="contactMethod">
-            Preferred contact method <span className="optional">optional</span>
-          </label>
-          <select id="contactMethod" {...register('contactMethod')}>
-            <option>No preference</option>
-            <option>Phone</option>
-            <option>Email</option>
-          </select>
         </div>
       </div>
       <div className="honeypot" aria-hidden="true">

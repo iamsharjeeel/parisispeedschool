@@ -33,10 +33,10 @@ export default function Privacy() {
         <h2>Information you choose to provide</h2>
         <p>
           The form asks for a parent, guardian, or adult athlete’s name, email,
-          phone number, athlete age group, and optional sport and contact
-          preference. Please do not send a child’s full name, date of birth,
-          medical history, or other sensitive information. Children should have
-          a parent or guardian make the request.
+          phone number, athlete age group, and optional sport. Please do not
+          send a child’s full name, date of birth, medical history, or other
+          sensitive information. Children should have a parent or guardian make
+          the request.
         </p>
         <h2>How we use an evaluation request</h2>
         <p>

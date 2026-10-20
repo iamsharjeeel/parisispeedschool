@@ -606,7 +606,10 @@ export default async function Home() {
             <CTA placement="final" className="button-white">
               Request a free athlete evaluation
             </CTA>
-            <a href={`tel:${business.telephone}`} className="final-call">
+            <a
+              href={`tel:${business.telephone}`}
+              className="button button-white final-call"
+            >
               Call Parisi Horsham
               <Arrow diagonal />
             </a>

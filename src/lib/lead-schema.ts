@@ -36,7 +36,6 @@ export const leadSchema = z.object({
   ),
   ageGroup: z.enum(ageGroups, { error: 'Select an age group.' }),
   sport: text(80),
-  contactMethod: z.enum(['No preference', 'Phone', 'Email']),
   consent: z
     .boolean()
     .refine((v) => v, 'Please agree so the team can respond to your request.'),

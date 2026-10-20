@@ -8,7 +8,6 @@ const lead = () => ({
   phone: '2155550123',
   ageGroup: '5–11',
   sport: 'Soccer',
-  contactMethod: 'Email',
   consent: true,
   website: '',
   submissionId: crypto.randomUUID(),
@@ -16,6 +15,7 @@ const lead = () => ({
   analyticsConsent: false,
 });
 async function completeForm(page: Page) {
+  await expect(page.getByLabel('Preferred contact method')).toHaveCount(0);
   await page.getByLabel('Parent / guardian full name').fill('Test Guardian');
   await page
     .getByLabel('Email', { exact: false })
@@ -24,7 +24,6 @@ async function completeForm(page: Page) {
   await page.getByLabel('Phone', { exact: false }).first().fill('2155550123');
   await page.getByLabel('Athlete age group').selectOption('5–11');
   await page.getByLabel('Primary sport').fill('Soccer');
-  await page.getByLabel('Preferred contact method').selectOption('Email');
   await page.locator('#consent').check();
 }
 test.beforeEach(async ({ request, page }) => {
@@ -220,7 +219,6 @@ test('confirmed lead preserves attribution, fires one event, and shows signed re
     phone: '2155550123',
     ageGroup: '5–11',
     sport: 'Soccer',
-    contactMethod: 'Email',
     consent: true,
     analyticsConsent: true,
     gclid: 'synthetic-click',
@@ -236,6 +234,7 @@ test('confirmed lead preserves attribution, fires one event, and shows signed re
     },
   });
   expect(received[0]).not.toHaveProperty('website');
+  expect(received[0]).not.toHaveProperty('contactMethod');
   expect(received[0].idempotencyKey).toBe(received[0].submissionId);
   await page.reload();
   const reloaded = await page.evaluate(

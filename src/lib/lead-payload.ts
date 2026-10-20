@@ -16,7 +16,6 @@ export function buildLeadPayload(input: Submission, eventId: string) {
     phone: input.phone,
     ageGroup: input.ageGroup,
     sport: input.sport,
-    contactMethod: input.contactMethod,
     consent: input.consent,
     analyticsConsent: input.analyticsConsent,
     ...attribution,

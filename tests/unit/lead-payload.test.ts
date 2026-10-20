@@ -8,7 +8,6 @@ const input = {
   phone: '+12155550123',
   ageGroup: '12–15',
   sport: 'Soccer',
-  contactMethod: 'Email',
   consent: true,
   website: '',
   submissionId: '123e4567-e89b-42d3-a456-426614174000',
@@ -27,7 +26,6 @@ describe('LeadConnector JSON payload', () => {
       'phone',
       'ageGroup',
       'sport',
-      'contactMethod',
       'consent',
       'analyticsConsent',
     ] as const) {
@@ -63,13 +61,11 @@ describe('LeadConnector JSON payload', () => {
       submissionSchema.parse({
         ...input,
         sport: '',
-        contactMethod: 'No preference',
       }),
       'event-id',
     );
     for (const key of attributionKeys) expect(payload[key]).toBeNull();
     expect(payload.sport).toBe('');
-    expect(payload.contactMethod).toBe('No preference');
     expect(payload.source).toBe('Website');
     expect(payload.campaign).toBeNull();
   });
@@ -79,6 +75,7 @@ describe('LeadConnector JSON payload', () => {
     vi.stubEnv('CRM_WEBHOOK_TOKEN', 'synthetic-private-token');
     const payload = buildLeadPayload(submissionSchema.parse(input), 'event-id');
     expect(payload).not.toHaveProperty('website');
+    expect(payload).not.toHaveProperty('contactMethod');
     expect(JSON.stringify(payload)).not.toContain('private-hook');
     expect(JSON.stringify(payload)).not.toContain('synthetic-private-token');
   });

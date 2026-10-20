@@ -1262,14 +1262,6 @@ select:focus-visible {
   background: var(--ink);
   color: white;
 }
-.final-call {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  border-bottom: 1px solid #ffffff80;
-  padding: 10px 0;
-  font-size: 12px;
-}
 .final-coordinate {
   display: block;
   text-align: right;
@@ -2621,6 +2613,9 @@ select:focus-visible {
   gap: 18px;
   margin-top: 36px;
 }
+.explore-section .explore-card:last-child:nth-child(3n + 1) {
+  grid-column: 2;
+}
 .explore-card,
 .detail-feature,
 .contact-card {
@@ -3081,6 +3076,11 @@ select:focus-visible {
   .explore-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .explore-section .explore-card:last-child:nth-child(3n + 1) {
+    grid-column: 1 / -1;
+    width: calc((100% - 18px) / 2);
+    justify-self: center;
+  }
   .detail-hero-grid {
     grid-template-columns: 1fr;
   }
@@ -3215,6 +3215,11 @@ select:focus-visible {
     grid-template-columns: 1fr;
     gap: 13px;
     margin-top: 28px;
+  }
+  .explore-section .explore-card:last-child:nth-child(3n + 1) {
+    grid-column: auto;
+    width: auto;
+    justify-self: stretch;
   }
   .explore-card {
     min-height: 190px;
@@ -3435,13 +3440,13 @@ h3 {
 .detail-next-panel .button,
 .form-submit,
 .thank-you .button {
-  color: #080808;
+  color: #fff;
   font-size: 14px;
   font-weight: 600;
   min-height: 52px;
 }
 .button:disabled {
-  color: #080808;
+  color: #fff;
 }
 .button-white {
   color: var(--ink);
@@ -3624,7 +3629,6 @@ h3 {
 }
 .final-call {
   font-size: 14px;
-  border-color: #08080870;
 }
 .footer-contact > .eyebrow,
 .footer-contact > a.email {
@@ -3985,7 +3989,7 @@ h3 {
     font-size: 12px;
   }
   .mobile-bottom a:last-child {
-    color: #080808;
+    color: #fff;
     padding: 14px 17px;
     gap: 12px;
   }
